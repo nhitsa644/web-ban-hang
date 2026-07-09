@@ -2071,5 +2071,104 @@
 
 	    ld();
 	</script>
+	/* Category picker: openCat, render, select, close */
+(function(){
+    window._selectedCats = { shop: null, acc: null };
+
+    function getMockCats() {
+        return [
+            { id: 'pubg', name: 'PUBG', icon: '<i class="fa-solid fa-gamepad"></i>' },
+            { id: 'gtav', name: 'GTA V', icon: '<i class="fa-solid fa-car"></i>' },
+            { id: 'valorant', name: 'Valorant', icon: '<i class="fa-solid fa-bolt"></i>' }
+        ];
+    }
+
+    function openCat(type) {
+        const bs = document.getElementById('mdl_cats');
+        const listWrap = document.getElementById('cat_list_render');
+        listWrap.innerHTML = '';
+
+        const cats = (window.shopData && (window.shopData.cats || window.shopData.categories)) || getMockCats();
+
+        cats.forEach(cat => {
+            const el = document.createElement('div');
+            el.className = 'bs-item';
+            el.style.display = 'flex';
+            el.style.justifyContent = 'space-between';
+            el.style.alignItems = 'center';
+            el.style.cursor = 'pointer';
+            el.innerHTML = '<div style="display:flex;align-items:center;gap:12px;"><div style="width:44px;height:44px;border-radius:10px;background:rgba(255,255,255,0.03);display:flex;align-items:center;justify-content:center;">'
+                + (cat.icon || '<i class="fa-solid fa-folder"></i>') + '</div><div><b style="font-size:14px;">' + (cat.name || cat.title || cat.id) + '</b><div style="font-size:12px;color:#94a3b8;">' + (cat.id || '') + '</div></div></div>'
+                + '<div style="color:#64748b;"><i class="fa-solid fa-chevron-right"></i></div>';
+            el.onclick = () => {
+                selectCat(type, cat);
+            };
+            listWrap.appendChild(el);
+        });
+
+        bs.style.display = 'block';
+    }
+
+    window.selectCat = function(type, cat) {
+        window._selectedCats[type] = cat;
+
+        const sbId = type === 'shop' ? 'sb_shop_cat_content' : 'sb_acc_cat_content';
+        const sb = document.getElementById(sbId);
+        if (sb) {
+            const iconHtml = cat.icon || '<i class="fa-solid fa-folder"></i>';
+            sb.innerHTML = '<div class="sel-icon" style="background:transparent;border:none;">' + iconHtml + '</div>'
+                + '<div class="sel-txt"><b>' + (cat.name || cat.title || cat.id) + '</b><span style="color:#94a3b8;">Đã chọn</span></div>';
+        }
+
+        try {
+            const targetListId = type === 'shop' ? 'shop_pkg_list' : 'acc_pkg_list';
+            const listEl = document.getElementById(targetListId);
+            if (listEl) {
+                listEl.innerHTML = '';
+                const prods = (window.shopData && window.shopData.prods && window.shopData.prods[cat.id]) || [
+                    { id: cat.id + '_1', name: 'Gói 1 ngày', price: 10000 },
+                    { id: cat.id + '_2', name: 'Gói 7 ngày', price: 50000 }
+                ];
+                prods.forEach(p => {
+                    const item = document.createElement('div');
+                    item.className = 'pkg-item';
+                    item.style.position = 'relative';
+                    item.innerHTML = '<div><b>' + (p.name || p.title || p.id) + '</b><span style="display:block;color:#94a3b8;margin-top:6px;">Mã: ' + (p.id || '') + '</span></div>'
+                        + '<div class="price">' + (p.price ? p.price.toLocaleString() + 'đ' : '---') + '</div>';
+                    item.onclick = () => {
+                        document.querySelectorAll('#' + targetListId + ' .pkg-item').forEach(x => x.classList.remove('act'));
+                        item.classList.add('act');
+                        const txtSubId = type === 'shop' ? 'txt_shop_buy_sub' : 'txt_acc_buy_sub';
+                        const txtSub = document.getElementById(txtSubId);
+                        if (txtSub) txtSub.innerText = (p.name || 'Gói đã chọn') + ' • ' + (p.price ? (p.price.toLocaleString() + 'đ') : '');
+                        window._selectedProduct = p;
+                    };
+                    listEl.appendChild(item);
+                });
+            }
+        } catch(e){ console.warn(e); }
+
+        clsCats();
+    };
+
+    window.clsCats = function(){
+        const bs = document.getElementById('mdl_cats');
+        if (!bs) return;
+        bs.style.display = 'none';
+    };
+
+    document.addEventListener('click', function(e){
+        const bs = document.getElementById('mdl_cats');
+        if (!bs || bs.style.display !== 'block') return;
+        const cnt = document.querySelector('.bs-cnt');
+        if (!cnt) return;
+        if (!cnt.contains(e.target) && !e.target.closest('.sel-box')) {
+            clsCats();
+        }
+    });
+
+    window.openCat = openCat;
+
+})();
 </body>
 </html>
