@@ -1,0 +1,2076 @@
+
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
+    <title>Mini App</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --bg: #0b0f19;
+            --txt: #f8fafc;
+            --pr: #6366f1;
+            --sc: #8b5cf6;
+            --p-bg: rgba(99, 102, 241, 0.1);
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; transition: all 0.3s ease; }
+        body { background: var(--bg); color: var(--txt); padding-bottom: 90px; overflow-x: hidden; }
+        .blob { position: fixed; filter: blur(80px); z-index: -1; opacity: 0.3; pointer-events: none; border-radius: 50%; }
+        .b1 { width: 350px; height: 350px; background: var(--pr); top: -100px; left: -50px; animation: slowFloat 15s ease-in-out infinite alternate; }
+        .b2 { width: 300px; height: 300px; background: var(--sc); bottom: 50px; right: -50px; animation: slowFloat 18s ease-in-out infinite alternate-reverse; }
+        .b3 { width: 250px; height: 250px; background: #10b981; top: 40%; left: -100px; animation: slowFloat 20s ease-in-out infinite alternate; }
+        @keyframes slowFloat {
+            0% { transform: translate(0, 0) scale(1); }
+            33% { transform: translate(30px, -50px) scale(1.1); }
+            66% { transform: translate(-20px, 20px) scale(0.9); }
+            100% { transform: translate(0, 0) scale(1); }
+        }
+
+        .hdr { display: flex; justify-content: space-between; align-items: center; padding: 10px 18px; background: rgba(20, 24, 36, 0.5); backdrop-filter: blur(25px) saturate(150%); -webkit-backdrop-filter: blur(25px) saturate(150%); border-bottom: 1px solid rgba(255, 255, 255, 0.08); position: sticky; top: 0; z-index: 90; box-shadow: 0 4px 30px rgba(0,0,0,0.5); gap: 10px; }
+        .hdr-left { display: flex; align-items: center; gap: 10px; flex: 1; min-width: 0; }
+        .avt { width: 40px; height: 40px; border-radius: 50%; background: linear-gradient(135deg, var(--pr), var(--sc)); display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 16px; color: #fff; overflow: hidden; border: 2px solid rgba(255,255,255,0.1); box-shadow: 0 0 15px rgba(99,102,241,0.4); flex-shrink: 0; }
+        .avt img { width: 100%; height: 100%; object-fit: cover; }
+        .hdr-info { min-width: 0; }
+        .hdr-info h3 { font-size: 14px; font-weight: 800; margin-bottom: 2px; letter-spacing: 0.3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .hdr-info p { font-size: 11px; color: #94a3b8; font-family: monospace; }
+        .hdr-center { display: flex; align-items: center; gap: 4px; flex-shrink: 0; }
+        .lang-btn { display: flex; align-items: center; gap: 4px; padding: 5px 9px; border-radius: 20px; border: 1.5px solid rgba(255,255,255,0.08); background: rgba(255,255,255,0.04); color: #94a3b8; font-size: 11px; font-weight: 700; cursor: pointer; letter-spacing: 0.5px; user-select: none; transition: 0.25s; }
+        .lang-btn .flag { font-size: 15px; line-height: 1; }
+        .lang-btn.active { border-color: var(--pr); background: rgba(99,102,241,0.15); color: #fff; box-shadow: 0 0 10px rgba(99,102,241,0.25); }
+        .lang-btn:active { transform: scale(0.93); }
+        .lang-sep { color: rgba(255,255,255,0.15); font-size: 12px; }
+        .hdr-right { text-align: right; flex-shrink: 0; }
+        .hdr-right b { font-size: 14px; color: var(--pr); display: block; margin-bottom: 2px; font-weight: 800; }
+        .hdr-right span { font-size: 10px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); padding: 3px 7px; border-radius: 6px; color: #cbd5e1; font-weight: 600; text-transform: uppercase; }
+        
+        .crd { background: linear-gradient(145deg, rgba(30, 34, 48, 0.4), rgba(20, 24, 36, 0.6)); backdrop-filter: blur(25px) saturate(120%); -webkit-backdrop-filter: blur(25px) saturate(120%); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 24px; padding: 20px; margin: 15px; box-shadow: 0 15px 35px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.1); transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.3s; }
+        .crd:hover { transform: translateY(-3px); box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.2); }
+        .crd h3 { font-size: 16px; margin-bottom: 15px; color: #fff; display: flex; align-items: center; gap: 10px; font-weight: 700; }
+        .crd-vip { background: linear-gradient(145deg, rgba(234, 179, 8, 0.1), rgba(0, 0, 0, 0.6)); border: 1px solid rgba(234, 179, 8, 0.4); box-shadow: 0 15px 35px rgba(234, 179, 8, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.2); }
+        .crd-vip h3 { color: #fde047; text-shadow: 0 0 10px rgba(234,179,8,0.3); }
+        
+        .btn { background: linear-gradient(135deg, var(--pr), var(--sc)); color: #fff; border: 1px solid rgba(255,255,255,0.1); padding: 15px; border-radius: 14px; font-weight: 700; width: 100%; cursor: pointer; transition: 0.2s; font-size: 15px; display: flex; align-items: center; justify-content: center; gap: 10px; box-shadow: 0 5px 20px rgba(99,102,241,0.3); position: relative; overflow: hidden; }
+        .btn::after { content: ""; background: rgba(255,255,255,0.3); display: block; position: absolute; border-radius: 50%; padding-top: 240%; padding-left: 240%; margin-top: -120%; margin-left: -120%; opacity: 0; transition: all 0.8s; }
+        .btn:active::after { padding-top: 0; padding-left: 0; margin-top: 0; margin-left: 0; opacity: 1; transition: 0s; }
+        .btn:active { transform: scale(0.96); box-shadow: none; }
+        .btn-gold { background: linear-gradient(135deg, #eab308, #b45309); box-shadow: 0 5px 20px rgba(234, 179, 8, 0.3); color: #fff; }
+        .btn-red { background: linear-gradient(135deg, #ef4444, #b91c1c); box-shadow: 0 5px 20px rgba(239,68,68,0.3); }
+        .btn-sm { padding: 10px 15px; font-size: 13px; width: auto; border-radius: 10px; }
+        
+        .inp-grp { position: relative; margin: 5px 0 15px; }
+        .inp-grp i { position: absolute; left: 15px; top: 16px; color: #64748b; font-size: 16px; }
+        input, textarea, select { width: 100%; padding: 15px 15px 15px 45px; background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 14px; color: #fff; outline: none; font-size: 14px; transition: 0.3s; box-shadow: inset 0 2px 5px rgba(0,0,0,0.2); appearance: none; -webkit-appearance: none; backdrop-filter: blur(10px); }
+        input:focus, textarea:focus, select:focus { background: rgba(255, 255, 255, 0.08); border-color: var(--pr); box-shadow: 0 0 15px rgba(99, 102, 241, 0.3), inset 0 2px 5px rgba(0,0,0,0.2); }
+        input[readonly] { opacity: 0.6; cursor: not-allowed; }
+        input::placeholder, textarea::placeholder { color: #64748b; }
+        textarea { padding-left: 15px; }
+        .inp-grp.no-icon input, .inp-grp.no-icon select, .inp-grp.no-icon textarea { padding-left: 15px; }
+        select option { background: #141722; color: #fff; }
+        
+        .tbar { position: fixed; bottom: 0; width: 100%; background: rgba(20, 24, 36, 0.6); backdrop-filter: blur(25px) saturate(150%); -webkit-backdrop-filter: blur(25px) saturate(150%); display: flex; padding: 12px 0 25px 0; border-top: 1px solid rgba(255,255,255,0.08); z-index: 99; border-top-left-radius: 25px; border-top-right-radius: 25px; box-shadow: 0 -10px 40px rgba(0,0,0,0.4); }
+        .titem { flex: 1; text-align: center; color: #64748b; font-size: 20px; cursor: pointer; transition: 0.3s; display: flex; flex-direction: column; align-items: center; gap: 6px; }
+        .titem.act { color: var(--pr); transform: translateY(-4px); filter: drop-shadow(0 5px 10px rgba(99,102,241,0.5)); }
+        .titem span { font-size: 11px; font-weight: 700; letter-spacing: 0.5px; }
+        
+        .view { display: none; animation: slowFadeIn 0.8s cubic-bezier(0.25, 1, 0.5, 1); } 
+        .view.act { display: block; }
+        @keyframes slowFadeIn { from { opacity: 0; transform: translateY(20px) scale(0.98); } to { opacity: 1; transform: translateY(0) scale(1); } }
+        
+        .shop-hdr { display: flex; align-items: center; gap: 15px; margin: 20px 20px 10px 20px; }
+        .shop-hdr .icon-bg { width: 50px; height: 50px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 16px; display: flex; align-items: center; justify-content: center; font-size: 20px; color: #cbd5e1; box-shadow: 0 5px 15px rgba(0,0,0,0.2); }
+        .shop-hdr h2 { font-size: 20px; font-weight: 800; color: #fff; letter-spacing: 0.5px; }
+        .shop-hdr p { font-size: 13px; color: #94a3b8; margin-top: 4px; font-weight: 500; }
+        
+        .step-lbl { display: flex; align-items: center; gap: 10px; font-size: 14px; font-weight: 700; color: #cbd5e1; margin-bottom: 12px; text-transform: uppercase; letter-spacing: 1px; }
+        .step-lbl i { color: var(--pr); font-size: 16px; }
+        
+        .sel-box { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 18px; padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; transition: 0.3s; box-shadow: inset 0 2px 10px rgba(0,0,0,0.2); }
+        .sel-box:active { background: rgba(255,255,255,0.05); transform: scale(0.98); }
+        .sel-left { display: flex; align-items: center; gap: 15px; }
+        .sel-icon { width: 48px; height: 48px; border-radius: 14px; background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.2); display: flex; align-items: center; justify-content: center; font-size: 22px; color: #10b981; overflow: hidden; box-shadow: 0 5px 15px rgba(16, 185, 129, 0.2); }
+        .sel-icon img { width: 100%; height: 100%; object-fit: cover; }
+        .sel-txt b { display: block; font-size: 16px; color: #fff; margin-bottom: 4px; font-weight: 700; }
+        .sel-txt span { font-size: 13px; color: #94a3b8; font-weight: 500; }
+        .sel-box > i { color: #64748b; font-size: 16px; }
+        
+        .pkg-list { display: flex; flex-direction: column; gap: 12px; }
+        .pkg-item { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); border-radius: 16px; padding: 18px 20px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; transition: 0.3s; position: relative; overflow: hidden; backdrop-filter: blur(10px); }
+        .pkg-item::before { content: ''; position: absolute; left: 0; top: 0; width: 4px; height: 100%; background: transparent; transition: 0.3s; }
+        .pkg-item.act { background: var(--p-bg); border-color: rgba(99, 102, 241, 0.3); box-shadow: 0 5px 20px rgba(99, 102, 241, 0.15); }
+        .pkg-item.act::before { background: var(--pr); }
+        .pkg-item b { font-size: 16px; color: #fff; font-weight: 700; }
+        .pkg-item span { font-size: 13px; color: #94a3b8; display: block; margin-top: 6px; font-weight: 500; }
+        .pkg-item .price { font-size: 16px; font-weight: 800; color: #fff; background: rgba(255,255,255,0.1); padding: 6px 12px; border-radius: 10px; text-align: right; }
+        .pkg-item.act .price { background: var(--pr); box-shadow: 0 4px 10px rgba(99,102,241,0.4); }
+        
+        .qty-wrap { display: flex; justify-content: space-between; align-items: center; margin-top: 25px; background: rgba(255,255,255,0.03); padding: 15px 20px; border-radius: 18px; border: 1px solid rgba(255,255,255,0.05); }
+        .qty-ctrl { display: flex; align-items: center; gap: 10px; background: rgba(255,255,255,0.05); padding: 5px; border-radius: 14px; }
+        .qty-btn { width: 36px; height: 36px; border: none; border-radius: 10px; background: rgba(255,255,255,0.1); color: #fff; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 14px; transition: 0.3s; }
+        .qty-btn:active { transform: scale(0.9); background: var(--pr); }
+        .qty-inp { width: 45px; height: 36px; padding: 0; margin: 0; background: transparent; border: none; color: #fff; font-size: 16px; font-weight: 800; text-align: center; box-shadow: none; }
+        .qty-inp:focus { background: transparent; box-shadow: none; }
+        
+        .bot-actions { display: flex; gap: 12px; margin-top: 25px; }
+        .ic-btn { width: 58px; height: 58px; border-radius: 18px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.08); display: flex; align-items: center; justify-content: center; color: #cbd5e1; font-size: 22px; cursor: pointer; flex-shrink: 0; transition: 0.3s; box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
+        .ic-btn:active { transform: scale(0.9); background: rgba(255,255,255,0.1); }
+        .buy-big { flex: 1; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.05); color: #64748b; border-radius: 18px; display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: not-allowed; transition: 0.4s; position: relative; overflow: hidden; min-height: 58px; }
+        .loader { display: inline-block; width: 20px; height: 20px; border: 3px solid rgba(255,255,255,0.2); border-radius: 50%; border-top-color: var(--pr); animation: spin 0.8s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .skeleton { background: linear-gradient(90deg, rgba(255,255,255,0.05) 25%, rgba(255,255,255,0.1) 50%, rgba(255,255,255,0.05) 75%); background-size: 200% 100%; animation: loading 1.5s infinite; }
+        @keyframes loading { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+        .load-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.7); display: none; align-items: center; justify-content: center; z-index: 999; }
+        .load-overlay.show { display: flex; }
+        .load-box { background: rgba(11,15,25,0.95); padding: 30px; border-radius: 20px; text-align: center; border: 1px solid rgba(255,255,255,0.1); }
+        .load-box .loader { width: 40px; height: 40px; border-width: 4px; margin: 0 auto 15px; }
+        .load-box p { color: #cbd5e1; font-size: 14px; margin-top: 10px; }
+
+        .buy-big b { font-size: 17px; font-weight: 800; margin-bottom: 3px; }
+        .buy-big span { font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+        .buy-big.ready { background: linear-gradient(135deg, var(--pr), var(--sc)); border: none; color: #fff; cursor: pointer; box-shadow: 0 8px 25px rgba(99,102,241,0.4); }
+        .buy-big.ready::after { content: ""; background: rgba(255,255,255,0.3); display: block; position: absolute; border-radius: 50%; padding-top: 240%; padding-left: 240%; margin-top: -120%; margin-left: -120%; opacity: 0; transition: all 0.8s; }
+        .buy-big.ready:active::after { padding-top: 0; padding-left: 0; margin-top: 0; margin-left: 0; opacity: 1; transition: 0s; }
+        .buy-big.ready:active { transform: scale(0.97); box-shadow: 0 4px 15px rgba(99,102,241,0.3); }
+        
+        .ad-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .stat-glass { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1); border-radius: 14px; padding: 12px 5px; text-align: center; display: flex; flex-direction: column; align-items: center; justify-content: center; backdrop-filter: blur(10px); }
+        .stat-glass i { font-size: 18px; margin-bottom: 5px; }
+        .stat-glass b { font-size: 14px; color: #fff; margin-bottom: 2px; }
+        .stat-glass span { font-size: 10px; color: #94a3b8; text-transform: uppercase; }
+        
+        .acc-glass { background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.08); border-radius: 14px; margin-bottom: 10px; transition: 0.4s ease-in-out; overflow: hidden; }
+        .acc-glass[open] { background: rgba(255,255,255,0.05); box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
+        .acc-glass summary { padding: 15px; font-size: 14px; font-weight: bold; color: #fff; cursor: pointer; display: flex; justify-content: space-between; align-items: center; list-style: none; outline: none; }
+        .acc-glass summary::-webkit-details-marker { display: none; }
+        .acc-content { padding: 0 15px 15px 15px; animation: slowSlideDown 0.5s ease; }
+        @keyframes slowSlideDown { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+        .k-row { display: flex; justify-content: space-between; align-items: center; font-size: 12px; padding: 10px 0; border-top: 1px dashed rgba(255,255,255,0.1); }
+        .k-code { font-family: monospace; color: var(--pr); font-size: 13px; font-weight: bold; word-break: break-all; }
+        .k-copy { padding: 5px 10px; background: rgba(255,255,255,0.1); border-radius: 6px; cursor: pointer; color: #fff; transition: 0.3s; }
+        .k-copy:active { background: var(--pr); transform: scale(0.9); }
+
+        .top-tabs { display: flex; gap: 8px; margin-bottom: 15px; padding: 0 5px; }
+        .top-tab { flex: 1; padding: 10px 5px; border-radius: 12px; border: 1.5px solid rgba(255,255,255,0.08); background: rgba(255,255,255,0.03); color: #64748b; font-size: 12px; font-weight: 700; text-align: center; cursor: pointer; transition: 0.25s; }
+        .top-tab.active { border-color: var(--pr); background: rgba(99,102,241,0.15); color: #fff; box-shadow: 0 0 10px rgba(99,102,241,0.2); }
+        .top-tab:active { transform: scale(0.95); }
+        
+        .top-item { display: flex; align-items: center; gap: 12px; padding: 14px 15px; background: rgba(255,255,255,0.03); border-radius: 16px; margin-bottom: 10px; border: 1px solid rgba(255,255,255,0.05); backdrop-filter: blur(10px); }
+        .top-1 { border-color: rgba(234, 179, 8, 0.5); background: rgba(234, 179, 8, 0.1); box-shadow: 0 0 15px rgba(234, 179, 8, 0.15); }
+        .top-2 { border-color: rgba(148, 163, 184, 0.4); background: rgba(148, 163, 184, 0.1); }
+        .top-3 { border-color: rgba(180, 83, 9, 0.4); background: rgba(180, 83, 9, 0.1); }
+        .rank-badge { width: 35px; height: 35px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 16px; background: rgba(255,255,255,0.05); color:#94a3b8; flex-shrink: 0; }
+        .top-1 .rank-badge { background: #eab308; color: #000; box-shadow: 0 0 10px rgba(234,179,8,0.5); }
+        .top-2 .rank-badge { background: #94a3b8; color: #000; }
+        .top-3 .rank-badge { background: #b45309; color: #fff; }
+        .top-avt { width: 38px; height: 38px; border-radius: 50%; background: linear-gradient(135deg, var(--pr), var(--sc)); display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 14px; color: #fff; overflow: hidden; flex-shrink: 0; border: 2px solid rgba(255,255,255,0.1); }
+        .top-avt img { width: 100%; height: 100%; object-fit: cover; }
+        .top-info { flex: 1; min-width: 0; }
+        .top-info .top-name { display: block; color: #fff; font-size: 14px; font-weight: 700; margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .top-info .top-sub { color: #94a3b8; font-size: 11px; font-family: monospace; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .top-amt { font-size: 15px; font-weight: 800; color: #10b981; white-space: nowrap; flex-shrink: 0; }
+        
+        .btm-sheet { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); align-items: flex-end; }
+        .bs-cnt { background: rgba(28, 31, 46, 0.95); width: 100%; border-top-left-radius: 30px; border-top-right-radius: 30px; padding: 25px 20px; max-height: 85vh; overflow-y: auto; animation: slUp 0.6s cubic-bezier(0.25, 1, 0.5, 1); border-top: 1px solid rgba(255,255,255,0.1); box-shadow: 0 -10px 40px rgba(0,0,0,0.5); }
+        @keyframes slUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+        .bs-drag { width: 50px; height: 6px; background: rgba(255,255,255,0.15); border-radius: 10px; margin: 0 auto 25px auto; }
+        .bs-title { font-size: 18px; font-weight: 800; text-align: center; margin-bottom: 20px; color: #fff; display: flex; align-items: center; justify-content: center; gap: 10px; }
+        .bs-title i { color: var(--pr); }
+        .bs-item { display: flex; align-items: center; gap: 15px; padding: 18px; border-radius: 16px; margin-bottom: 8px; background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.03); cursor: pointer; transition: 0.3s; }
+        .bs-item:active { background: rgba(255,255,255,0.05); transform: scale(0.98); }
+        
+        .mdl { display: none; position: fixed; z-index: 1050; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.85); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); justify-content: center; align-items: center; }
+        .mdl-cnt { background: linear-gradient(145deg, #141722, #0b0f19); border: 1px solid rgba(255,255,255,0.1); border-radius: 28px; padding: 25px 20px; width: 90%; max-width: 350px; text-align: center; position: relative; animation: slowZmIn 0.6s cubic-bezier(0.25, 1, 0.5, 1); box-shadow: inset 0 0 20px rgba(255,255,255,0.02), 0 20px 50px rgba(0,0,0,0.8); }
+        @keyframes slowZmIn { from { transform: scale(0.85); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+        .cls-btn { position: absolute; top: 20px; right: 20px; font-size: 24px; color: #64748b; cursor: pointer; background: rgba(255,255,255,0.05); width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; border-radius: 50%; transition: 0.3s; }
+        .cls-btn:active { background: rgba(239,68,68,0.2); color: #ef4444; transform: scale(0.9); }
+        .mdl-cnt h2 { color: var(--pr); font-size: 26px; margin: 5px 0 15px 0; font-weight: 800; text-shadow: 0 4px 15px rgba(99,102,241,0.4); }
+        .qr-wrap { background: #fff; padding: 10px; border-radius: 20px; display: inline-block; margin-bottom: 15px; box-shadow: 0 10px 25px rgba(99,102,241,0.25); border: 3px solid rgba(255,255,255,0.9); }
+        .qr-wrap img { width: 240px; height: 240px; display: block; border-radius: 12px; object-fit: contain; }
+        .dt-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,0.05); }
+        .dt-row:last-child { border-bottom: none; }
+        .dt-lbl { color: #94a3b8; font-size: 12px; font-weight: 600; }
+        .dt-val { color: #fff; font-size: 13px; font-weight: 700; display: flex; align-items: center; gap: 8px; }
+        .dt-val i { color: var(--pr); cursor: pointer; padding: 6px; background: rgba(99,102,241,0.15); border-radius: 8px; transition: 0.3s; }
+        .dt-val i:active { transform: scale(0.85); background: var(--pr); color: #fff; }
+        .warn-box { background: rgba(234, 179, 8, 0.1); border: 1px solid rgba(234, 179, 8, 0.2); color: #fde047; padding: 12px; border-radius: 14px; font-size: 12px; text-align: left; margin-top: 15px; line-height: 1.5; display: flex; gap: 10px; align-items: center; }
+        .wait-box { background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.03); border-radius: 14px; padding: 12px; color: #cbd5e1; font-size: 13px; font-weight: 600; margin-top: 15px; display: flex; flex-direction: column; align-items: center; gap: 5px; }
+
+        .promo-banner { background: linear-gradient(135deg, rgba(234,179,8,0.15), rgba(234,179,8,0.05)); border: 1px solid rgba(234,179,8,0.3); border-radius: 14px; padding: 12px 15px; margin-bottom: 15px; display: flex; align-items: center; gap: 10px; font-size: 13px; color: #fde047; }
+        .promo-banner i { font-size: 20px; }
+        .promo-day-tag { display: inline-block; background: linear-gradient(135deg,#eab308,#b45309); color:#000; font-size:9px; font-weight:800; padding:2px 6px; border-radius:6px; margin-left:5px; vertical-align:middle; text-transform:uppercase; }
+    </style>
+</head>
+<body>
+        <div id="loading_screen" style="position:fixed; top:0; left:0; width:100%; height:100%; background:linear-gradient(135deg,#0b0f19,#141722); z-index:9999; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:30px;">
+        <div style="text-align:center;">
+            <div style="width:70px; height:70px; border:4px solid rgba(99,102,241,0.2); border-top:4px solid #6366f1; border-radius:50%; animation:spin_load 1s linear infinite; margin:0 auto 25px;"></div>
+            <p style="color:#cbd5e1; font-size:16px; margin:0; font-weight:700; letter-spacing:0.5px;">Đang tải ứng dụng...</p>
+        </div>
+        <div style="width:250px;">
+            <div style="width:100%; height:6px; background:rgba(99,102,241,0.1); border-radius:3px; overflow:hidden; margin-bottom:12px; box-shadow:inset 0 2px 4px rgba(0,0,0,0.3);">
+                <div id="loading_bar" style="height:100%; background:linear-gradient(90deg,#6366f1,#8b5cf6); width:0%; transition:width 0.3s ease; box-shadow:0 0 15px rgba(99,102,241,0.5);"></div>
+            </div>
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+                <p id="loading_status" style="color:#94a3b8; font-size:12px; margin:0; font-weight:600;">Khởi tạo...</p>
+                <p id="loading_pct" style="color:#6366f1; font-size:13px; margin:0; font-weight:700; font-family:monospace;">0%</p>
+            </div>
+        </div>
+    </div>
+    <style>
+        @keyframes lds-ring { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        @keyframes spin_load { to { transform: rotate(360deg); } }
+    </style>
+
+    <div id="welcome_modal" class="mdl" style="z-index:2000; display:none;">
+        <div class="mdl-cnt" style="max-width:340px; padding:35px 28px; text-align:center; animation:slideUp 0.4s cubic-bezier(0.34,1.56,0.64,1); background:linear-gradient(135deg, rgba(99,102,241,0.15), rgba(139,92,246,0.15)); border:1px solid rgba(99,102,241,0.3); border-radius:20px; box-shadow:0 8px 32px rgba(99,102,241,0.2);">
+            <h2 id="welcome_title" style="color:#fff; font-size:22px; font-weight:800; margin:0 0 15px 0; background:linear-gradient(135deg, #6366f1, #8b5cf6); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text;"></h2>
+            <p id="welcome_content" style="color:#cbd5e1; font-size:14px; margin:0 0 25px 0; line-height:1.7;"></p>
+            <button id="welcome_close" class="btn" style="width:100%; margin:0; background:linear-gradient(135deg, #6366f1, #8b5cf6); border:none; font-weight:600;" onclick="document.getElementById('welcome_modal').style.display='none';">Tắt Thông Báo</button>
+        </div>
+    </div>
+    <style>
+        @keyframes slideUp {
+            from { transform: translateY(30px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+    </style>
+
+    <div id="custom_popup" class="mdl" style="z-index:10000;">
+        <div class="mdl-cnt" style="max-width:320px; padding:30px 20px; position:relative; text-align:left;">
+            <button id="popup_close_btn" class="cls-btn" style="position:absolute; top:15px; right:15px; display:none;" onclick="document.getElementById('custom_popup').style.display='none';"><i class="fa-solid fa-xmark"></i></button>
+            <div style="display:flex; align-items:flex-start; gap:15px; margin-bottom:20px; text-align:left;">
+                <div id="popup_icon" style="font-size:40px; flex-shrink:0; margin-top:5px;"></div>
+                <div style="flex:1; text-align:left;">
+                    <h3 id="popup_title" style="color:#fff; margin:0 0 8px 0; font-size:16px; font-weight:700;"></h3>
+                    <div id="popup_msg" style="color:#94a3b8; font-size:13px; line-height:1.6; margin:0;"></div>
+                </div>
+            </div>
+            <div id="popup_details" style="display:none; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.05); border-radius:12px; padding:12px; margin-bottom:20px; text-align:left;"></div>
+            <div id="popup_btns" style="display:flex; gap:10px; justify-content:flex-end;">
+                <button id="popup_cancel" class="btn btn-sm btn-red" style="min-width:96px; display:none;">Hủy</button>
+                <button id="popup_ok" class="btn btn-sm" style="min-width:120px;">Đóng thông báo</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="blob b1"></div>
+    <div class="blob b2"></div>
+    <div class="blob b3"></div>
+
+    <div class="hdr">
+        <div class="hdr-left">
+            <div class="avt" id="h_avt"></div>
+            <div class="hdr-info">
+                <h3 id="h_n">Khách</h3>
+                <p id="h_id">ID: 000000</p>
+            </div>
+        </div>
+        <div class="hdr-center">
+            <button class="lang-btn active" id="lb_vi" onclick="setLang('vi')">
+                <i class="fa-solid fa-language flag"></i> VI
+            </button>
+            <span class="lang-sep">|</span>
+            <button class="lang-btn" id="lb_en" onclick="setLang('en')">
+                <i class="fa-solid fa-globe flag"></i> EN
+            </button>
+        </div>
+        <div class="hdr-right">
+            <b id="h_b">0đ</b>
+            <span id="h_r">Customer</span>
+        </div>
+    </div>
+
+    <div id="v_shop" class="view act">
+        <div class="shop-hdr">
+            <div class="icon-bg"><i class="fa-solid fa-key"></i></div>
+            <div>
+                <h2 data-i18n="shop_title">Mua Key Game/Tool</h2>
+                <p data-i18n="shop_sub">Hệ thống tự động cấp Key</p>
+            </div>
+        </div>
+        <div class="crd">
+            <div id="top_banner_shop"></div>
+            <div class="step-lbl"><i class="fa-solid fa-gamepad"></i> <span data-i18n="step_choose_app">Chọn ứng dụng</span></div>
+            <div class="sel-box" onclick="openCat('shop')">
+                <div class="sel-left" id="sb_shop_cat_content">
+                    <div class="sel-icon"><i class="fa-solid fa-gamepad"></i></div>
+                    <div class="sel-txt">
+                        <b data-i18n="tap_to_choose_game">Nhấn chọn game</b>
+                        <span data-i18n="not_chosen">Chưa chọn</span>
+                    </div>
+                </div>
+                <i class="fa-solid fa-chevron-down"></i>
+            </div>
+            <div class="step-lbl" style="margin-top: 25px;"><i class="fa-solid fa-box"></i> <span data-i18n="step_choose_pkg">Chọn gói</span></div>
+            <div id="shop_pkg_list" class="pkg-list">
+                <div style="text-align:center; padding: 30px 20px; color: #64748b; font-size: 14px; background: rgba(255,255,255,0.03); border-radius: 16px; border: 1px dashed rgba(255,255,255,0.05);"><i class="fa-solid fa-box-open" style="font-size:30px; margin-bottom:10px; display:block; opacity:0.5;"></i> <span data-i18n="empty_list">Danh sách trống</span></div>
+            </div>
+            <div class="qty-wrap">
+                <div class="step-lbl" style="margin-bottom:0;"><i class="fa-solid fa-layer-group"></i> <span data-i18n="quantity">Số lượng</span></div>
+                <div class="qty-ctrl">
+                    <button class="qty-btn" onclick="chgQty(-1)"><i class="fa-solid fa-minus"></i></button>
+                    <input type="number" id="shop_qty" value="1" min="1" onchange="updQty()" class="qty-inp">
+                    <button class="qty-btn" onclick="chgQty(1)"><i class="fa-solid fa-plus"></i></button>
+                </div>
+            </div>
+            <div class="bot-actions">
+                <div class="ic-btn" onclick="openFile()"><i class="fa-solid fa-download"></i></div>
+                <div class="ic-btn" onclick="openShare()"><i class="fa-solid fa-share"></i></div>
+                <button class="buy-big" id="btn_shop_buy" onclick="execBuy()">
+                    <b data-i18n="buy_now">Mua ngay</b>
+                    <span id="txt_shop_buy_sub" data-i18n="not_chosen_pkg">chưa chọn gói</span>
+                </button>
+            </div>
+        </div>
+        <div class="crd">
+            <h3 style="margin-bottom:10px;"><i class="fa-solid fa-history"></i> <span data-i18n="recent_txn">Giao Dịch Gần Đây</span></h3>
+            <div id="global_hist"></div>
+        </div>
+    </div>
+
+    <div id="v_acc" class="view">
+        <div class="shop-hdr">
+            <div class="icon-bg" style="color:#10b981; background:rgba(16, 185, 129, 0.1); border-color:rgba(16, 185, 129, 0.2);"><i class="fa-solid fa-wallet"></i></div>
+            <div>
+                <h2 data-i18n="acc_title">Mua Tài Khoản</h2>
+                <p data-i18n="acc_sub">Mua Account uy tín, chất lượng</p>
+            </div>
+        </div>
+        <div class="crd">
+            <div id="top_banner_acc"></div>
+            <div class="step-lbl"><i class="fa-solid fa-dice-d20"></i> <span data-i18n="step_choose_service">Chọn dịch vụ / Game</span></div>
+            <div class="sel-box" onclick="openCat('acc')">
+                <div class="sel-left" id="sb_acc_cat_content">
+                    <div class="sel-icon" style="color:#10b981;"><i class="fa-solid fa-user-gear"></i></div>
+                    <div class="sel-txt">
+                        <b data-i18n="tap_to_choose_item">Nhấn chọn mục</b>
+                        <span data-i18n="not_chosen">Chưa chọn</span>
+                    </div>
+                </div>
+                <i class="fa-solid fa-chevron-down"></i>
+            </div>
+            <div class="step-lbl" style="margin-top: 25px;"><i class="fa-solid fa-id-card"></i> <span data-i18n="step_choose_acc_type">Chọn loại Account</span></div>
+            <div id="acc_pkg_list" class="pkg-list">
+                <div style="text-align:center; padding: 30px 20px; color: #64748b; font-size: 14px; background: rgba(255,255,255,0.03); border-radius: 16px; border: 1px dashed rgba(255,255,255,0.05);"><i class="fa-solid fa-box-open" style="font-size:30px; margin-bottom:10px; display:block; opacity:0.5;"></i> <span data-i18n="empty_list">Danh sách trống</span></div>
+            </div>
+            <div class="qty-wrap">
+                <div class="step-lbl" style="margin-bottom:0;"><i class="fa-solid fa-users"></i> <span data-i18n="acc_qty_label">Số lượng Acc</span></div>
+                <div class="qty-ctrl">
+                    <button class="qty-btn" onclick="chgQty(-1)"><i class="fa-solid fa-minus"></i></button>
+                    <input type="number" id="acc_qty" value="1" min="1" onchange="updQty()" class="qty-inp">
+                    <button class="qty-btn" onclick="chgQty(1)"><i class="fa-solid fa-plus"></i></button>
+                </div>
+            </div>
+            <div class="bot-actions">
+                <button class="buy-big" id="btn_acc_buy" onclick="execBuy()">
+                    <b data-i18n="buy_now">Mua ngay</b>
+                    <span id="txt_acc_buy_sub" data-i18n="not_chosen_pkg">chưa chọn gói</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div id="v_dep" class="view">
+        <div class="crd crd-vip">
+            <h3><i class="fa-solid fa-money-bill-wave"></i> <span data-i18n="dep_title">Nạp Tiền Tự Động 24/7</span></h3>
+            <p style="font-size: 13px; color: #cbd5e1; margin-bottom: 20px;" data-i18n="dep_sub">Giao dịch được xử lý tự động trong vòng 5 giây.</p>
+            <div class="inp-grp">
+                <i class="fa-solid fa-money-bill-wave" style="color:#eab308;"></i>
+                <input type="number" id="d_a" data-i18n-ph="dep_placeholder">
+            </div>
+            <button class="btn btn-gold" onclick="depManual()"><i class="fa-solid fa-qrcode"></i> <span data-i18n="gen_qr">TẠO MÃ QR NẠP TIỀN</span></button>
+        </div>
+        <div class="crd" style="margin-top: 15px;">
+            <h3><i class="fa-solid fa-history"></i> <span data-i18n="dep_history">Lịch Sử Nạp Của Bạn</span></h3>
+            <div id="d_ls"></div>
+        </div>
+    </div>
+
+    <div id="v_top" class="view">
+        <div class="shop-hdr">
+            <div class="icon-bg" style="color:#eab308; background:rgba(234,179,8,0.1); border-color:rgba(234,179,8,0.2);"><i class="fa-solid fa-coins"></i></div>
+            <div>
+                <h2 data-i18n="top_title">Bảng Xếp Hạng</h2>
+                <p data-i18n="top_sub">Top người dùng nạp nhiều nhất</p>
+            </div>
+        </div>
+        <div class="crd" style="padding:15px;">
+            <div id="top_promo_info" style="margin-bottom:10px;"></div>
+            <div class="top-tabs">
+                <div class="top-tab active" onclick="switchTop('month',this)" data-i18n="top_tab_month">Tháng này</div>
+                <div class="top-tab" onclick="switchTop('week',this)" data-i18n="top_tab_week">Tuần này</div>
+                <div class="top-tab" onclick="switchTop('all',this)" data-i18n="top_tab_all">Tất cả</div>
+            </div>
+            <div id="top_render_month"></div>
+            <div id="top_render_week" style="display:none;"></div>
+            <div id="top_render_all" style="display:none;"></div>
+        </div>
+    </div>
+
+    <div id="v_pro" class="view">
+        <div class="crd">
+            <h3><i class="fa-solid fa-ticket"></i> Mã Voucher</h3>
+            <div class="inp-grp no-icon" style="margin-bottom:8px;">
+                <input type="text" id="pr_voucher_code" placeholder="Nhập mã voucher">
+            </div>
+            <button class="btn btn-sm" style="width:100%; margin-bottom:15px; background:rgba(99,102,241,0.2); border:1px solid rgba(99,102,241,0.3); color:#6366f1;" onclick="applyVoucherCode()"><i class="fa-solid fa-circle-check"></i> Áp Dụng Voucher</button>
+            <div id="pr_voucher_result" style="display:none; padding:12px 15px; border-radius:12px; margin-bottom:15px; font-size:13px;"></div>
+        </div>
+        <div class="crd">
+            <h3><i class="fa-solid fa-gift"></i> Mã Giftcode</h3>
+            <div class="inp-grp no-icon" style="margin-bottom:8px;">
+                <input type="text" id="pr_giftcode_code" placeholder="Nhập mã giftcode">
+            </div>
+            <button class="btn btn-sm" style="width:100%; margin-bottom:15px; background:rgba(168,85,247,0.2); border:1px solid rgba(168,85,247,0.3); color:#a855f7;" onclick="applyGiftcodeCode()"><i class="fa-solid fa-circle-check"></i> Áp Dụng Giftcode</button>
+            <div id="pr_giftcode_result" style="display:none; padding:12px 15px; border-radius:12px; margin-bottom:15px; font-size:13px;"></div>
+        </div>
+        <div class="crd">
+            <h3><i class="fa-solid fa-chart-pie"></i> <span data-i18n="pro_overview">Tổng Quan Tài Khoản</span></h3>
+            <div class="ad-grid" style="grid-template-columns: 1fr 1fr 1fr; gap:8px;">
+                <div class="stat-glass">
+                    <i class="fa-solid fa-key" style="color:var(--pr);"></i>
+                    <b id="pr_t_keys">0</b>
+                    <span data-i18n="stat_bought">SP Đã Mua</span>
+                </div>
+                <div class="stat-glass">
+                    <i class="fa-solid fa-cart-shopping" style="color:#eab308;"></i>
+                    <b id="pr_t_spent">0đ</b>
+                    <span data-i18n="stat_spent">Tổng Chi</span>
+                </div>
+                <div class="stat-glass">
+                    <i class="fa-solid fa-wallet" style="color:#10b981;"></i>
+                    <b id="pr_t_dep">0đ</b>
+                    <span data-i18n="stat_deposited">Tổng Nạp</span>
+                </div>
+            </div>
+        </div>
+        <div class="crd">
+            <h3><i class="fa-solid fa-share-nodes"></i> <span data-i18n="ref_system">Hệ Thống Giới Thiệu (Ref)</span></h3>
+            <p style="font-size:12px; color:#94a3b8; margin-bottom:10px;"><span data-i18n="ref_desc">Nhận ngay</span> <b id="pr_ref_pct" style="color:#10b981;">0%</b> <span data-i18n="ref_desc2">hoa hồng khi người được bạn mời nạp tiền thành công.</span></p>
+            <div class="inp-grp no-icon" style="margin-bottom:10px;">
+                <input type="text" id="pr_ref_link" readonly value="...">
+            </div>
+            <button class="btn btn-sm" style="width:100%; margin-bottom:15px;" onclick="cp('pr_ref_link')" data-i18n="copy_ref_link">Copy Link Giới Thiệu</button>
+            <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.05); padding:12px 15px; border-radius:12px; border:1px solid rgba(255,255,255,0.1);">
+                <span style="font-size:13px; color:#cbd5e1; font-weight:600;" data-i18n="ref_earned">Tiền Hoa Hồng Đã Nhận:</span>
+                <b style="color:#eab308; font-size:16px;" id="pr_ref_earn">0đ</b>
+            </div>
+        </div>
+        <div class="crd">
+            <h3><i class="fa-solid fa-box"></i> <span data-i18n="my_inventory">Kho Của Bạn (Lịch sử chi tiết)</span></h3>
+            <div id="p_ls_group"></div>
+        </div>
+    </div>
+
+    <div id="v_adm" class="view">
+        <div class="crd">
+            <h3><i class="fa-solid fa-chart-bar"></i> Thống Kê Chung</h3>
+            <div class="ad-grid" style="grid-template-columns: 1fr 1fr 1fr; margin-bottom: 10px;">
+                <div style="text-align:center; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.1); padding:10px; border-radius:10px;"><p style="font-size:11px;color:#94a3b8;">User</p><b id="a_u">0</b></div>
+                <div style="text-align:center; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.1); padding:10px; border-radius:10px;"><p style="font-size:11px;color:#94a3b8;">Nạp</p><b id="a_r" style="color:var(--pr);">0</b></div>
+                <div style="text-align:center; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.1); padding:10px; border-radius:10px;"><p style="font-size:11px;color:#94a3b8;">Spam</p><b id="a_s" style="color:#ef4444;">0</b></div>
+            </div>
+            <div style="text-align:center; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.1); padding:10px; border-radius:10px; margin-bottom:10px; font-size:12px; color:#cbd5e1;">
+                <i class="fa-solid fa-satellite-dish" style="color:var(--pr);"></i> Check Bank gần nhất: <b id="a_cron">Chưa chạy</b>
+            </div>
+        </div>
+        <div class="crd" style="border-color:rgba(239, 68, 68, 0.3); background:linear-gradient(145deg, rgba(239, 68, 68, 0.05), rgba(20, 24, 36, 0.6));">
+            <h3 style="color:#ef4444;"><i class="fa-solid fa-ban"></i> Người Dùng Bị Ban</h3>
+            <div id="a_banned_list" style="max-height: 400px; overflow-y: auto;"></div>
+        </div>
+        <div class="crd">
+            <h3 style="color:#ef4444;"><i class="fa-solid fa-triangle-exclamation"></i> Log Spam</h3>
+            <div id="a_spam_list" style="max-height: 300px; overflow-y: auto;"></div>
+            <button class="btn btn-sm btn-red" style="width:100%; margin-top:10px;" onclick="cmd('clearspam')"><i class="fa-solid fa-trash"></i> Xóa Toàn Bộ Log Spam</button>
+        </div>
+        <div class="crd">
+            <h3><i class="fa-solid fa-gift"></i> Cài Đặt Khuyến Mãi Top</h3>
+            <div class="inp-grp no-icon"><select id="tc_en"><option value="0">Tắt chức năng Khuyến Mãi</option><option value="1">Bật Khuyến Mãi Theo Top</option></select></div>
+            <div class="inp-grp no-icon"><select id="tc_ty"><option value="week">Tính Top theo Tuần</option><option value="month">Tính Top theo Tháng</option><option value="all">Tính Top Toàn Thời Gian</option></select></div>
+
+            <p style="font-size:12px; color:#94a3b8; margin-bottom:8px; margin-top:5px;"><i class="fa-solid fa-calendar-days"></i> Chọn 2 ngày khuyến mãi trong tuần (Thứ 2=1 ... Chủ Nhật=7)</p>
+            <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:15px;" id="tc_days_wrap">
+                <label style="display:flex;align-items:center;gap:4px;font-size:12px;background:rgba(255,255,255,0.05);padding:6px 10px;border-radius:8px;cursor:pointer;border:1px solid rgba(255,255,255,0.08);"><input type="checkbox" value="1" class="tc_day_chk" style="width:auto;padding:0;"> T2</label>
+                <label style="display:flex;align-items:center;gap:4px;font-size:12px;background:rgba(255,255,255,0.05);padding:6px 10px;border-radius:8px;cursor:pointer;border:1px solid rgba(255,255,255,0.08);"><input type="checkbox" value="2" class="tc_day_chk" style="width:auto;padding:0;"> T3</label>
+                <label style="display:flex;align-items:center;gap:4px;font-size:12px;background:rgba(255,255,255,0.05);padding:6px 10px;border-radius:8px;cursor:pointer;border:1px solid rgba(255,255,255,0.08);"><input type="checkbox" value="3" class="tc_day_chk" style="width:auto;padding:0;"> T4</label>
+                <label style="display:flex;align-items:center;gap:4px;font-size:12px;background:rgba(255,255,255,0.05);padding:6px 10px;border-radius:8px;cursor:pointer;border:1px solid rgba(255,255,255,0.08);"><input type="checkbox" value="4" class="tc_day_chk" style="width:auto;padding:0;"> T5</label>
+                <label style="display:flex;align-items:center;gap:4px;font-size:12px;background:rgba(255,255,255,0.05);padding:6px 10px;border-radius:8px;cursor:pointer;border:1px solid rgba(255,255,255,0.08);"><input type="checkbox" value="5" class="tc_day_chk" style="width:auto;padding:0;"> T6</label>
+                <label style="display:flex;align-items:center;gap:4px;font-size:12px;background:rgba(255,255,255,0.05);padding:6px 10px;border-radius:8px;cursor:pointer;border:1px solid rgba(255,255,255,0.08);"><input type="checkbox" value="6" class="tc_day_chk" style="width:auto;padding:0;"> T7</label>
+                <label style="display:flex;align-items:center;gap:4px;font-size:12px;background:rgba(255,255,255,0.05);padding:6px 10px;border-radius:8px;cursor:pointer;border:1px solid rgba(255,255,255,0.08);"><input type="checkbox" value="7" class="tc_day_chk" style="width:auto;padding:0;"> CN</label>
+            </div>
+
+            <div class="inp-grp no-icon">
+                <select id="tc_dtype" onchange="toggleDiscountType()">
+                    <option value="pct">Loại giảm: Giảm % Giá toàn bộ SP</option>
+                    <option value="special_price">Loại giảm: Sửa giá 1 Sản Phẩm cụ thể</option>
+                </select>
+            </div>
+
+            <div id="tc_pct_block">
+                <p style="font-size:12px; color:#94a3b8; margin-bottom:5px;">Cài đặt % Giảm giá cho Top (0 = không áp dụng hạng đó)</p>
+                <div class="ad-grid">
+                    <div class="inp-grp no-icon"><input type="number" id="tc_1" placeholder="% Giảm Top 1"></div>
+                    <div class="inp-grp no-icon"><input type="number" id="tc_2" placeholder="% Giảm Top 2"></div>
+                    <div class="inp-grp no-icon"><input type="number" id="tc_3" placeholder="% Giảm Top 3"></div>
+                    <div class="inp-grp no-icon"><input type="number" id="tc_4" placeholder="% Giảm Top 4"></div>
+                    <div class="inp-grp no-icon"><input type="number" id="tc_5" placeholder="% Giảm Top 5"></div>
+                </div>
+            </div>
+
+            <div id="tc_sp_block" style="display:none;">
+                <p style="font-size:12px; color:#94a3b8; margin-bottom:8px;">Chọn SP và đặt giá đặc biệt dành cho người xếp Top 1 trong ngày KM</p>
+                <div class="inp-grp no-icon"><select id="tc_sp_prod"><option value="">-- Chọn Sản Phẩm --</option></select></div>
+                <div class="inp-grp no-icon"><input type="number" id="tc_sp_price" placeholder="Giá đặc biệt (VNĐ) cho Top 1"></div>
+                <p style="font-size:11px; color:#64748b; margin-top:-10px; margin-bottom:15px;"><i class="fa-solid fa-lightbulb"></i> Chỉ Top 1 mới nhận giá đặc biệt này trong ngày KM</p>
+            </div>
+
+            <button class="btn btn-sm" style="width:100%;" onclick="saveTopConf()"><i class="fa-solid fa-save"></i> Lưu Cấu Hình Khuyến Mãi</button>
+        </div>
+	        <div class="crd">
+	            <h3><i class="fa-solid fa-gear"></i> Cài Đặt Affiliate (Hoa Hồng Ref)</h3>
+	            <div class="inp-grp no-icon"><input type="number" id="rf_p" placeholder="% Hoa hồng người giới thiệu"></div>
+	            <button class="btn btn-sm" style="width:100%;" onclick="cmd('ref_conf','rf_p')"><i class="fa-solid fa-hand-holding-dollar"></i> Lưu Cấu Hình Ref</button>
+	        </div>
+        <div class="crd">
+            <h3><i class="fa-solid fa-eye"></i> Hiển thị mục Mua Acc</h3>
+            <div class="inp-grp no-icon">
+                <select id="adm_show_acc">
+                    <option value="1">Bật (Hiện tab Mua Acc)</option>
+                    <option value="0">Tắt (Ẩn tab Mua Acc)</option>
+                </select>
+            </div>
+            <button class="btn btn-sm" style="width:100%;" onclick="cmd('toggle_acc','adm_show_acc')"><i class="fa-solid fa-eye"></i> Lưu Cấu Hình Hiển Thị</button>
+        </div>
+        <div class="crd">
+            <h3><i class="fa-solid fa-gear"></i> Cài Đặt Bảo Trì</h3>
+            <div class="inp-grp no-icon">
+                <select id="adm_maintenance_on">
+                    <option value="0">Tắt (Hoạt động bình thường)</option>
+                    <option value="1">Bật (Đang bảo trì)</option>
+                </select>
+            </div>
+            <div class="inp-grp no-icon">
+                <textarea id="adm_maintenance_msg" rows="3" placeholder="Nội dung thông báo bảo trì"></textarea>
+            </div>
+            <button class="btn btn-sm" style="width:100%;" onclick="cmd('save_maintenance','adm_maintenance_on','adm_maintenance_msg')"><i class="fa-solid fa-screwdriver-wrench"></i> Lưu Cấu Hình Bảo Trì</button>
+        </div>
+        <div class="crd">
+            <h3><i class="fa-solid fa-list"></i> Quản Lý Đơn Nạp</h3>
+            <div class="inp-grp no-icon" style="margin-bottom:10px;"><input type="text" placeholder="Tìm kiếm ID, Mã GD, Tiền..." onkeyup="searchList('a_orders_list', this.value)"></div>
+            <div id="a_orders_list" style="max-height: 400px; overflow-y: auto;"></div>
+        </div>
+        <div class="crd">
+            <h3><i class="fa-solid fa-clock-rotate-left"></i> Lịch Sử Mua Hàng Toàn Hệ Thống</h3>
+            <div class="inp-grp no-icon" style="margin-bottom:10px;"><input type="text" placeholder="Tìm kiếm ID, Tên SP, Key..." onkeyup="searchList('a_all_hist', this.value)"></div>
+            <div id="a_all_hist" style="max-height: 400px; overflow-y: auto;"></div>
+        </div>
+        <div class="crd">
+            <h3><i class="fa-solid fa-list"></i> Quản Lý Các Rank / Role</h3>
+            <div class="inp-grp no-icon"><select id="ar_sel"><option value="">-- Các Rank Đang Có --</option></select></div>
+            <button class="btn btn-sm btn-red" style="width:100%; margin-bottom:15px;" onclick="cmd('del_rank','ar_sel')"><i class="fa-solid fa-trash"></i> Xóa Rank Đang Chọn</button>
+            <hr style="border-color:rgba(255,255,255,0.05); margin-bottom:15px;">
+            <div class="inp-grp no-icon"><input type="text" id="ar_n" placeholder="Nhập tên Role mới (Ví dụ: Đại Lý)"></div>
+            <button class="btn btn-sm" style="width:100%;" onclick="cmd('add_rank','ar_n')"><i class="fa-solid fa-plus"></i> Thêm Role Mới</button>
+        </div>
+        <div class="crd">
+            <h3><i class="fa-solid fa-gear"></i> Cài Đặt Giá Theo Từng Role</h3>
+            <div class="inp-grp no-icon"><select id="ep_c"><option value="">-- Chọn Sản Phẩm --</option></select></div>
+            <div class="inp-grp no-icon"><select id="ep_r"><option value="Customer">Giá mặc định (Customer)</option></select></div>
+            <div class="inp-grp no-icon"><input type="number" id="ep_p" placeholder="Giá mới cho Role này (VNĐ)"></div>
+            <button class="btn btn-sm" style="width:100%;" onclick="cmd('editprice','ep_c','ep_p','ep_r')"><i class="fa-solid fa-tags"></i> Cập Nhật Giá</button>
+        </div>
+        <div class="crd">
+            <h3><i class="fa-solid fa-list"></i> Quản Lý Thư Mục</h3>
+            <div class="inp-grp no-icon"><select id="ac_sel" onchange="fillCatForm()"><option value="NEW">[+] Thêm Thư Mục Mới</option></select></div>
+            <div class="inp-grp no-icon"><select id="ac_t"><option value="0">Loại Mục: Key Game / Tool</option><option value="1">Loại Mục: Tài Khoản (Acc)</option></select></div>
+            <div class="inp-grp no-icon"><input type="text" id="ac_m" placeholder="Mã Thư Mục (VD: pubg)"></div>
+            <div class="inp-grp no-icon"><input type="text" id="ac_n" placeholder="Tên hiển thị (VD: Tool PUBG)"></div>
+            <div class="inp-grp no-icon"><input type="text" id="ac_i" placeholder="Link ảnh Logo (Tùy chọn)"></div>
+            <div class="inp-grp no-icon"><input type="text" id="ac_f" placeholder="Link Tải Xuống App (Tùy chọn)"></div>
+            <div class="inp-grp no-icon"><input type="text" id="ac_s" placeholder="Link Chia Sẻ App (Tùy chọn)"></div>
+            <div class="ad-grid">
+                <button class="btn btn-sm" onclick="cmd('addcat','ac_m','ac_n','ac_i','ac_f','ac_s', 'ac_t')"><i class="fa-solid fa-folder-plus"></i> Lưu Mục</button>
+                <button class="btn btn-sm btn-red" onclick="cmd('delcat','ac_m')"><i class="fa-solid fa-trash"></i> Xóa Mục này</button>
+            </div>
+        </div>
+        <div class="crd">
+            <h3><i class="fa-solid fa-boxes-stacked"></i> Quản Lý Danh Sách SP</h3>
+            <div class="inp-grp no-icon"><select id="ap_sel" onchange="fillProdForm()"><option value="NEW">[+] Thêm Gói Sản Phẩm Mới</option></select></div>
+            <div class="inp-grp no-icon"><select id="ap_c"><option value="">-- Chọn Thư Mục Chứa SP --</option></select></div>
+            <div class="inp-grp no-icon"><select id="ap_isacc"><option value="0">Loại: Key Game / Tool</option><option value="1">Loại: Tài Khoản (Acc)</option></select></div>
+            <div class="inp-grp no-icon"><input type="text" id="ap_m" placeholder="Mã Gói (VD: pubg_1d)"></div>
+            <div class="inp-grp no-icon"><input type="text" id="ap_n" placeholder="Tên Gói (VD: 1 Ngày)"></div>
+            <div class="inp-grp no-icon"><input type="number" id="ap_p3" placeholder="Giá Gốc Customer (VNĐ)"></div>
+            <div class="ad-grid">
+                <button class="btn btn-sm" onclick="cmd('addsp','ap_c','ap_m','ap_p3','ap_n','ap_isacc')"><i class="fa-solid fa-floppy-disk"></i> Lưu / Cập Nhật</button>
+                <button class="btn btn-sm btn-red" onclick="cmd('delsp','ap_m')"><i class="fa-solid fa-trash"></i> Xóa SP này</button>
+            </div>
+        </div>
+        <div class="crd">
+            <h3><i class="fa-solid fa-list"></i> Quản Lý Voucher</h3>
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:10px;">
+                <div class="inp-grp no-icon"><input type="text" id="vc_code" placeholder="Mã voucher"></div>
+                <div class="inp-grp no-icon"><select id="vc_type" style="background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); color:#cbd5e1; padding:8px 10px; border-radius:10px;"><option value="discount">Giảm Tiền</option><option value="percent">Giảm %</option></select></div>
+            </div>
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:10px;">
+                <div class="inp-grp no-icon"><input type="number" id="vc_value" placeholder="Giá trị"></div>
+                <div class="inp-grp no-icon"><input type="datetime-local" id="vc_expiry" placeholder="Hạn sử dụng"></div>
+            </div>
+            <div class="inp-grp no-icon" style="margin-bottom:10px;">
+                <input type="number" id="vc_limit" placeholder="Lượt dùng (0=vô hạn)">
+            </div>
+            <button class="btn btn-sm" style="width:100%; margin-bottom:10px;" onclick="cmd('add_voucher','vc_code','vc_type','vc_value','vc_value','vc_expiry','vc_limit')"><i class="fa-solid fa-plus"></i> Tạo Voucher</button>
+            <button class="btn btn-sm" style="width:100%; background:rgba(255,255,255,0.05); color:#94a3b8; border:1px solid rgba(255,255,255,0.1); margin-bottom:15px;" onclick="loadVouchers()"><i class="fa-solid fa-eye"></i> Xem Danh Sách</button>
+            <div id="vc_list" style="display:none; max-height:300px; overflow-y:auto;"></div>
+        </div>
+        <div class="crd">
+            <h3><i class="fa-solid fa-gift"></i> Quản Lý Giftcode</h3>
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:10px;">
+                <div class="inp-grp no-icon"><input type="text" id="gc_code" placeholder="Mã giftcode"></div>
+                <button class="btn btn-sm" style="background:rgba(99,102,241,0.2); border:1px solid rgba(99,102,241,0.3); color:#6366f1; margin:0; padding:8px 10px;" onclick="genRandomGiftcode()"><i class="fa-solid fa-dice"></i> Random</button>
+            </div>
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:10px;">
+                <div class="inp-grp no-icon"><select id="gc_type" style="background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); color:#cbd5e1; padding:8px 10px; border-radius:10px;"><option value="money">Tiền Nạp</option><option value="product">Sản Phẩm</option><option value="discount">Giảm %</option></select></div>
+                <div class="inp-grp no-icon"><input type="number" id="gc_qty" placeholder="Số lượng tạo (nếu random)" value="1"></div>
+            </div>
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:10px;">
+                <div class="inp-grp no-icon"><input type="number" id="gc_value" placeholder="Giá trị"></div>
+                <div class="inp-grp no-icon"><input type="text" id="gc_product" placeholder="Mã SP (nếu cần)"></div>
+            </div>
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:10px;">
+                <div class="inp-grp no-icon"><input type="datetime-local" id="gc_expiry" placeholder="Hạn sử dụng"></div>
+                <div class="inp-grp no-icon"><input type="number" id="gc_limit" placeholder="Lượt dùng (0=vô hạn)"></div>
+            </div>
+            <button class="btn btn-sm" style="width:100%; margin-bottom:10px;" onclick="cmd('add_giftcode','gc_code','gc_type','gc_value','gc_product','gc_value','gc_expiry','gc_limit')"><i class="fa-solid fa-plus"></i> Tạo Giftcode</button>
+            <button class="btn btn-sm" style="width:100%; background:rgba(255,255,255,0.05); color:#94a3b8; border:1px solid rgba(255,255,255,0.1); margin-bottom:15px;" onclick="loadGiftcodes()"><i class="fa-solid fa-eye"></i> Xem Danh Sách</button>
+            <div id="gc_list" style="display:none; max-height:300px; overflow-y:auto;"></div>
+        </div>
+        <div class="crd">
+            <h3><i class="fa-solid fa-key"></i> Quản Lý Kho Key / Acc</h3>
+            <div class="inp-grp no-icon"><select id="ak_m"><option value="">-- Chọn Gói Sản Phẩm --</option></select></div>
+            <div class="inp-grp no-icon"><textarea id="ak_k" rows="3" placeholder="Danh sách Key/Tài khoản (mỗi dòng 1 Key)"></textarea></div>
+            <div class="ad-grid" style="margin-bottom: 12px;">
+                <button class="btn btn-sm" onclick="cmd('upkey','ak_m','ak_k')"><i class="fa-solid fa-upload"></i> Up Lên Kho</button>
+                <button class="btn btn-sm btn-red" onclick="cmd('delkeys','ak_m')"><i class="fa-solid fa-broom"></i> Dọn Sạch Kho</button>
+            </div>
+            <button class="btn btn-sm" style="width:100%; background:rgba(255,255,255,0.05); color:#94a3b8; border:1px solid rgba(255,255,255,0.1);" onclick="listKeys()"><i class="fa-solid fa-eye"></i> Xem Kho của SP</button>
+            <div id="al_ls" style="margin-top:15px; max-height:300px; overflow-y:auto;"></div>
+        </div>
+        <div class="crd">
+            <h3><i class="fa-solid fa-list"></i> Quản Lý User</h3>
+            <div class="inp-grp no-icon"><input type="number" id="au_i" placeholder="ID Telegram User"></div>
+            <div class="ad-grid" style="margin-bottom: 12px;">
+                <div class="inp-grp no-icon" style="margin:0;"><input type="text" id="au_v_money" placeholder="Số tiền (+/-)"></div>
+                <button class="btn btn-sm" style="background:rgba(255,255,255,0.1); border:none; margin:0;" onclick="cmd('userinfo','au_i')"><i class="fa-solid fa-circle-info"></i> Info</button>
+            </div>
+            <div class="ad-grid" style="margin-bottom: 12px;">
+                <button class="btn btn-sm" style="background:#10b981; border:none;" onclick="cmd('usermoney','au_i','au_v_money','add')"><i class="fa-solid fa-plus"></i> Tiền</button>
+                <button class="btn btn-sm" style="background:#e11d48; border:none;" onclick="cmd('usermoney','au_i','au_v_money','sub')"><i class="fa-solid fa-minus"></i> Tiền</button>
+            </div>
+            <div class="ad-grid" style="margin-bottom: 12px;">
+                <div class="inp-grp no-icon" style="margin:0;"><select id="au_v_rank"><option value="">-- Đổi Rank --</option></select></div>
+                <button class="btn btn-sm" style="background:#eab308; border:none;" onclick="cmd('userrank','au_i','au_v_rank')"><i class="fa-solid fa-user-tag"></i> Đổi Rank</button>
+            </div>
+            <div class="ad-grid" style="margin-bottom: 12px;">
+                <div class="inp-grp no-icon" style="margin:0;"><input type="text" id="au_v_msg" placeholder="Nội dung gửi"></div>
+                <button class="btn btn-sm" style="background:#8b5cf6; border:none;" onclick="cmd('sendmsg','au_i','au_v_msg')"><i class="fa-solid fa-paper-plane"></i> Gửi Tin</button>
+            </div>
+            <div class="ad-grid">
+                <div class="inp-grp no-icon" style="margin:0;"><select id="au_b"><option value="ban">Khoá tài khoản (Ban)</option><option value="unban">Mở tài khoản (Unban)</option></select></div>
+                <button class="btn btn-sm btn-red" style="margin:0;" onclick="cmd('userban','au_i','au_b')"><i class="fa-solid fa-gavel"></i> Thực thi</button>
+            </div>
+        </div>
+        <div class="crd">
+	            <h3><i class="fa-solid fa-bullhorn"></i> Gửi Broadcast</h3>
+	            <div class="inp-grp no-icon"><textarea id="bc_m" rows="3" placeholder="Nội dung gửi All"></textarea></div>
+	            <div class="ad-grid">
+	                <button class="btn btn-sm" onclick="cmd('broadcast','bc_m')"><i class="fa-solid fa-paper-plane"></i> Gửi All</button>
+	                <button class="btn btn-sm btn-red" onclick="cmd('stopbc')"><i class="fa-solid fa-stop"></i> Dừng</button>
+	            </div>
+	        </div>
+            <div class="crd">
+                <h3><i class="fa-solid fa-bell"></i> Thông báo vào App</h3>
+                <div class="inp-grp no-icon"><input type="text" id="entry_t" placeholder="Tiêu đề thông báo"></div>
+                <div class="inp-grp no-icon"><textarea id="entry_c" rows="3" placeholder="Nội dung thông báo"></textarea></div>
+                <button class="btn btn-sm" style="width:100%;" onclick="cmd('save_entry_msg','entry_t','entry_c')"><i class="fa-solid fa-floppy-disk"></i> Lưu Thông Báo</button>
+            </div>
+    </div>
+
+    <div class="tbar">
+        <div class="titem act" onclick="sw('shop',this)" id="tb_shop"><i class="fa-solid fa-key"></i><span data-i18n="tab_key">Mua Key</span></div>
+        <div class="titem" onclick="sw('acc',this)" id="tb_acc"><i class="fa-solid fa-id-card"></i><span data-i18n="tab_acc">Mua Acc</span></div>
+        <div class="titem" onclick="sw('dep',this)" id="tb_dep"><i class="fa-solid fa-wallet"></i><span data-i18n="tab_deposit">Nạp Tiền</span></div>
+        <div class="titem" onclick="sw('top',this)" id="tb_top"><i class="fa-solid fa-ranking-star"></i><span data-i18n="tab_top">Top Nạp</span></div>
+        <div class="titem" onclick="sw('pro',this)" id="tb_pro"><i class="fa-solid fa-user"></i><span data-i18n="tab_profile">Cá Nhân</span></div>
+        <div class="titem" id="tb_adm" style="display:none;" onclick="sw('adm',this)"><i class="fa-solid fa-shield-halved"></i><span>Admin</span></div>
+    </div>
+
+    <div id="mdl_cats" class="btm-sheet">
+        <div class="bs-cnt">
+            <div class="bs-drag"></div>
+            <div class="bs-title"><i class="fa-solid fa-list"></i> <span data-i18n="choose_category">Chọn Mục</span></div>
+            <div id="cat_list_render"></div>
+        </div>
+    </div>
+
+    <div id="qr_mdl" class="mdl">
+        <div class="mdl-cnt">
+            <span class="cls-btn" onclick="clsMdl()"><i class="fa-solid fa-xmark"></i></span>
+            <div style="font-size: 13px; color: #94a3b8; margin-bottom: 5px; text-transform: uppercase; letter-spacing: 1px; font-weight: 600;" data-i18n="paying">Đang thanh toán</div>
+            <h3 id="m_title" style="color: #fff; font-size: 18px; margin-bottom: 8px; font-weight: 800;">Tên sản phẩm</h3>
+            <h2 id="m_amt">0đ</h2>
+            <div class="qr-wrap"><img id="m_i_qr" src=""></div>
+            <div class="dt-row">
+                <span class="dt-lbl" data-i18n="bank_name">Ngân hàng</span>
+                <span class="dt-val" id="m_c_bank">VPB</span>
+            </div>
+            <div class="dt-row">
+                <span class="dt-lbl" data-i18n="account_number">Số tài khoản</span>
+                <div class="dt-val"><span id="m_c_stk">0</span> <i class="fa-regular fa-copy" onclick="cp('m_c_stk')"></i></div>
+            </div>
+            <div class="dt-row">
+                <span class="dt-lbl" data-i18n="account_holder">Chủ tài khoản</span>
+                <span class="dt-val" id="m_c_name">NAME</span>
+            </div>
+            <div class="dt-row">
+                <span class="dt-lbl" data-i18n="transfer_note">Nội dung CK</span>
+                <div class="dt-val"><span id="m_c_nd" style="color:#ef4444;">ND</span> <i class="fa-regular fa-copy" onclick="cp('m_c_nd')"></i></div>
+            </div>
+            <div class="warn-box">
+                <i class="fa-solid fa-triangle-exclamation" style="font-size: 24px;"></i>
+                <span data-i18n="payment_note"><b>Lưu ý:</b> Vui lòng chuyển đúng số tiền và nội dung. Giao dịch sẽ được xử lý ngay lập tức.</span>
+            </div>
+            <div class="wait-box">
+                <i class="fa-solid fa-circle-notch fa-spin" style="font-size: 26px; margin-bottom: 5px;"></i>
+                <span data-i18n="waiting_payment">Đang chờ thanh toán...</span>
+                <div id="m_timer" style="margin-top: 5px; font-size: 13px; color: #ef4444;"></div>
+            </div>
+        </div>
+    </div>
+
+<script>
+    const i18n = {
+        vi: {
+            shop_title: "Mua Key Game/Tool", shop_sub: "Hệ thống tự động cấp Key",
+            step_choose_app: "Chọn ứng dụng", step_choose_pkg: "Chọn gói",
+            step_choose_service: "Chọn dịch vụ / Game", step_choose_acc_type: "Chọn loại Account",
+            tap_to_choose_game: "Nhấn chọn game", tap_to_choose_item: "Nhấn chọn mục",
+            not_chosen: "Chưa chọn", not_chosen_pkg: "chưa chọn gói", empty_list: "Danh sách trống",
+            quantity: "Số lượng", acc_qty_label: "Số lượng Acc", buy_now: "Mua ngay",
+            recent_txn: "Giao Dịch Gần Đây", acc_title: "Mua Tài Khoản", acc_sub: "Mua Account uy tín, chất lượng",
+            dep_title: "Nạp Tiền Tự Động 24/7", dep_sub: "Giao dịch được xử lý tự động trong vòng 1 giây.",
+            dep_placeholder: "Nhập số tiền (Tối thiểu 2.000đ)", gen_qr: "TẠO MÃ QR NẠP TIỀN",
+            dep_history: "Lịch Sử Nạp Của Bạn", top_title: "Bảng Xếp Hạng",
+            top_sub: "Top người dùng nạp nhiều nhất",
+            top_tab_month: "Tháng này", top_tab_week: "Tuần này", top_tab_all: "Tất cả",
+            pro_overview: "Tổng Quan Tài Khoản", stat_bought: "SP Đã Mua", stat_spent: "Tổng Chi", stat_deposited: "Tổng Nạp",
+            ref_system: "Hệ Thống Giới Thiệu (Ref)", ref_desc: "Nhận ngay", ref_desc2: "hoa hồng khi người được bạn mời nạp tiền thành công.",
+            copy_ref_link: "Copy Link Giới Thiệu", ref_earned: "Tiền Hoa Hồng Đã Nhận:",
+            my_inventory: "Kho Của Bạn (Lịch sử chi tiết)",
+            tab_key: "Mua Key", tab_acc: "Mua Acc", tab_deposit: "Nạp Tiền", tab_top: "Top Nạp", tab_profile: "Cá Nhân",
+            choose_category: "Chọn Mục", paying: "Đang thanh toán",
+            bank_name: "Ngân hàng", account_number: "Số tài khoản", account_holder: "Chủ tài khoản", transfer_note: "Nội dung CK",
+            payment_note: "<b>Lưu ý:</b> Vui lòng chuyển đúng số tiền và nội dung. Giao dịch sẽ được xử lý ngay lập tức.",
+            waiting_payment: "Đang chờ thanh toán...", expires_in: "Hết hạn sau:", txn_expired: "Giao dịch đã hết hạn",
+            chosen_ok: "Đã chọn xong", stock_label: "Kho:", no_pkg: "Không có gói nào",
+            out_of_stock: "Hết hàng", other_pkg: "Vui lòng chọn gói khác",
+            no_app_selected: "Vui lòng chọn ứng dụng trước!", no_pkg_selected: "Vui lòng chọn gói trước!",
+            no_download: "Không có link tải xuống cho ứng dụng này.", no_share: "Không có link chia sẻ cho ứng dụng này.",
+            min_deposit: "Số tiền tối thiểu là 2,000đ", exceed_stock: "Vượt quá số lượng tồn kho!",
+            remain_stock: "Chỉ còn", remain_stock2: "SP trong kho!",
+            buy_success: "Mua thành công", buy_success2: "SP! Check tin nhắn bot.",
+            copied: "Đã sao chép: ", no_data: "Chưa có dữ liệu", no_deposit: "Chưa có giao dịch nạp.",
+            no_product: "Chưa có SP nào.", no_top: "Chưa có dữ liệu.",
+            rank_label: "Hạng", id_label: "ID: ", deposit_on: "nạp", bought: "mua",
+            bought_date: "Ngày mua:", payment_success: "Thanh toán thành công! Giao dịch hoàn tất.",
+            confirm_delete: "Bạn có chắc chắn muốn xóa? Dữ liệu không thể khôi phục!",
+            confirm_delete_key: "Xoá dữ liệu này?", confirm_approve: "Xác nhận DUYỆT đơn nạp này?",
+            confirm_cancel: "Xác nhận HỦY đơn nạp này?",
+            approve: "Duyệt", cancel_order: "Hủy",
+            pending: "Chờ duyệt", done: "Hoàn thành", wrong_amount: "Sai tiền", expired: "Hết hạn", cancelled: "Đã Hủy",
+            promo_discount_banner: "Hôm nay là ngày KM! Bạn được giảm {pct}% (Top {type})",
+            promo_special_banner: "<i class=\"fa-solid fa-star\"></i> Hôm nay là ngày KM! Bạn được mua {name} với giá đặc biệt {price}đ (Top 1)",
+            promo_day_info: "Ngày KM trong tuần: {days}",
+            special_price_tag: "GIÁ TOP"
+        },
+        en: {
+            shop_title: "Buy Game Key / Tool", shop_sub: "Auto key delivery system",
+            step_choose_app: "Choose application", step_choose_pkg: "Choose package",
+            step_choose_service: "Choose service / game", step_choose_acc_type: "Choose account type",
+            tap_to_choose_game: "Tap to select game", tap_to_choose_item: "Tap to select category",
+            not_chosen: "Not selected", not_chosen_pkg: "no package selected", empty_list: "List is empty",
+            quantity: "Quantity", acc_qty_label: "Account quantity", buy_now: "Buy now",
+            recent_txn: "Recent Transactions", acc_title: "Buy Accounts", acc_sub: "Trusted, quality accounts",
+            dep_title: "Auto Deposit 24/7", dep_sub: "Transactions processed automatically within 1 second.",
+            dep_placeholder: "Enter amount (Min. 2,000đ)", gen_qr: "GENERATE QR CODE",
+            dep_history: "Your Deposit History", top_title: "Leaderboard",
+            top_sub: "Top depositors",
+            top_tab_month: "This Month", top_tab_week: "This Week", top_tab_all: "All Time",
+            pro_overview: "Account Overview", stat_bought: "Items Bought", stat_spent: "Total Spent", stat_deposited: "Total Deposited",
+            ref_system: "Referral System", ref_desc: "Earn", ref_desc2: "commission when your referral deposits successfully.",
+            copy_ref_link: "Copy Referral Link", ref_earned: "Commission Earned:",
+            my_inventory: "My Inventory (detailed)",
+            tab_key: "Buy Key", tab_acc: "Buy Acc", tab_deposit: "Deposit", tab_top: "Top", tab_profile: "Profile",
+            choose_category: "Choose Category", paying: "Processing payment",
+            bank_name: "Bank", account_number: "Account number", account_holder: "Account holder", transfer_note: "Transfer note",
+            payment_note: "<b>Note:</b> Please transfer the exact amount with the correct note.",
+            waiting_payment: "Waiting for payment...", expires_in: "Expires in:", txn_expired: "Transaction expired",
+            chosen_ok: "Selected", stock_label: "Stock:", no_pkg: "No packages available",
+            out_of_stock: "Out of stock", other_pkg: "Please choose another package",
+            no_app_selected: "Please select an application first!", no_pkg_selected: "Please select a package first!",
+            no_download: "No download link for this app.", no_share: "No share link for this app.",
+            min_deposit: "Minimum amount is 2,000đ", exceed_stock: "Exceeds available stock!",
+            remain_stock: "Only", remain_stock2: "items left in stock!",
+            buy_success: "Purchased", buy_success2: "items! Check your bot messages.",
+            copied: "Copied: ", no_data: "No data yet", no_deposit: "No deposit transactions yet.",
+            no_product: "No items yet.", no_top: "No data yet.",
+            rank_label: "Rank", id_label: "ID: ", deposit_on: "deposited", bought: "bought",
+            bought_date: "Date:", payment_success: "Payment successful! Transaction complete.",
+            confirm_delete: "Are you sure you want to delete? This cannot be undone!",
+            confirm_delete_key: "Delete this item?", confirm_approve: "Confirm APPROVE this deposit?",
+            confirm_cancel: "Confirm CANCEL this deposit?",
+            approve: "Approve", cancel_order: "Cancel",
+            pending: "Pending", done: "Completed", wrong_amount: "Wrong amount", expired: "Expired", cancelled: "Cancelled",
+            promo_discount_banner: "Today is promo day! You get {pct}% off (Top {type})",
+            promo_special_banner: "<i class=\"fa-solid fa-star\"></i> Today is promo day! You can buy {name} at special price {price}đ (Top 1)",
+            promo_day_info: "Promo days: {days}",
+            special_price_tag: "TOP PRICE"
+        }
+    };
+
+    let currentLang = 'vi';
+    let successDialogQueue = [];
+    let isShowingSuccessDialog = false;
+    
+    function showSuccessDialog(msg, callback, options) {
+        successDialogQueue.push({msg, callback, options});
+        processSuccessDialogQueue();
+    }
+    
+    function processSuccessDialogQueue() {
+        if (isShowingSuccessDialog || successDialogQueue.length === 0) return;
+        isShowingSuccessDialog = true;
+        const {msg, callback, options} = successDialogQueue.shift();
+        tg.showConfirm(msg, () => {
+            isShowingSuccessDialog = false;
+            if (callback) callback(true);
+            processSuccessDialogQueue();
+        }, options || {});
+    }
+    
+    function showLoadingOverlay(show = true) {
+        let overlay = document.getElementById('load_overlay');
+        if (!overlay) {
+            overlay = document.createElement('div');
+            overlay.id = 'load_overlay';
+            overlay.className = 'load-overlay';
+            overlay.innerHTML = '<div class="load-box"><div class="loader"></div><p>Đang xử lý...</p></div>';
+            document.body.appendChild(overlay);
+        }
+        if (show) overlay.classList.add('show');
+        else overlay.classList.remove('show');
+    }
+    function t(key) { return i18n[currentLang][key] || i18n['vi'][key] || key; }
+
+    function applyI18n() {
+        document.querySelectorAll('[data-i18n]').forEach(el => {
+            el.innerHTML = t(el.getAttribute('data-i18n'));
+        });
+        document.querySelectorAll('[data-i18n-ph]').forEach(el => {
+            el.placeholder = t(el.getAttribute('data-i18n-ph'));
+        });
+        document.getElementById('lb_vi').className = 'lang-btn' + (currentLang === 'vi' ? ' active' : '');
+        document.getElementById('lb_en').className = 'lang-btn' + (currentLang === 'en' ? ' active' : '');
+    }
+
+    function setLang(lang) {
+        if (currentLang === lang) return;
+        currentLang = lang;
+        localStorage.setItem('lang_pref', lang);
+        applyI18n();
+        r('set_lang', { lang }).catch(() => {});
+        if (shopData.prods) renderProHist(lastHistData, lastStatsData);
+        renderDepHist(lastDepHistData);
+        renderGlobal(lastGBuy, lastGDep);
+        renderAllTops();
+    }
+
+    const tg_origin = window.Telegram.WebApp; 
+    tg_origin.expand(); 
+    tg_origin.setHeaderColor('#11131a');
+    tg_origin.setBackgroundColor('#11131a');
+
+    const tg = {
+        ...tg_origin,
+        showAlert: function(msg, callback) {
+            const popup = document.getElementById('custom_popup');
+            const title = document.getElementById('popup_title');
+            const message = document.getElementById('popup_msg');
+            const icon = document.getElementById('popup_icon');
+            const details = document.getElementById('popup_details');
+            const okBtn = document.getElementById('popup_ok');
+            const cancelBtn = document.getElementById('popup_cancel');
+
+            title.innerText = 'Thông báo';
+            message.innerHTML = msg;
+            icon.innerHTML = '<i class="fa-solid fa-circle-info" style="color:var(--pr);"></i>';
+            details.style.display = 'none';
+            cancelBtn.style.display = 'none';
+            okBtn.innerText = 'Đóng thông báo';
+            okBtn.onclick = () => {
+                popup.style.display = 'none';
+                if (callback) callback();
+            };
+            popup.style.display = 'flex';
+        },
+        showConfirm: function(msg, callback, options = {}) {
+            const popup = document.getElementById('custom_popup');
+            const title = document.getElementById('popup_title');
+            const message = document.getElementById('popup_msg');
+            const icon = document.getElementById('popup_icon');
+            const details = document.getElementById('popup_details');
+            const okBtn = document.getElementById('popup_ok');
+            const cancelBtn = document.getElementById('popup_cancel');
+
+            title.innerText = options.title || 'Xác nhận';
+            message.innerHTML = msg;
+            const isNoticePopup = msg.includes('NẠP TIỀN THÀNH CÔNG') || msg.includes('MUA HÀNG THÀNH CÔNG') || options.isNotice;
+            okBtn.innerText = options.okText || (isNoticePopup ? 'Đóng thông báo' : 'OK');
+            cancelBtn.innerText = options.cancelText || 'Hủy';
+            
+            if (msg.includes('NẠP TIỀN THÀNH CÔNG')) {
+                icon.innerHTML = '<i class="fa-solid fa-circle-check" style="color:#10b981;"></i>';
+            } else if (msg.includes('MUA HÀNG THÀNH CÔNG') || options.isBuy) {
+                icon.innerHTML = '<i class="fa-solid fa-cart-check" style="color:#10b981;"></i>';
+            } else {
+                icon.innerHTML = '<i class="fa-solid fa-circle-question" style="color:var(--sc);"></i>';
+            }
+
+            if (options.details) {
+                details.innerHTML = options.details;
+                details.style.display = 'block';
+            } else {
+                details.style.display = 'none';
+            }
+
+            cancelBtn.style.display = isNoticePopup ? 'none' : 'block';
+            okBtn.onclick = () => {
+                popup.style.display = 'none';
+                if (callback) callback(true);
+            };
+            cancelBtn.onclick = () => {
+                popup.style.display = 'none';
+                if (callback) callback(false);
+            };
+            popup.style.display = 'flex';
+        }
+    };
+
+    function startLoading() {
+        const screen = document.getElementById('loading_screen');
+        const bar = document.getElementById('loading_bar');
+        const pctText = document.getElementById('loading_pct');
+        const statusText = document.getElementById('loading_status');
+        let pct = 0;
+        
+        const steps = [
+            { target: 15, duration: 600, label: 'Khởi tạo...' },
+            { target: 35, duration: 800, label: 'Tải dữ liệu...' },
+            { target: 65, duration: 1000, label: 'Chuẩn bị giao diện...' },
+            { target: 90, duration: 600, label: 'Hoàn tất...' },
+            { target: 100, duration: 400, label: '100%' }
+        ];
+        
+        let stepIndex = 0;
+        let stepStartTime = Date.now();
+        
+        const updateProgress = () => {
+            if (stepIndex >= steps.length) {
+                pct = 100;
+                bar.style.width = '100%';
+                pctText.innerText = '100%';
+                statusText.innerText = 'Hoàn tất!';
+                setTimeout(() => { screen.style.display = 'none'; }, 500);
+                return;
+            }
+            
+            const step = steps[stepIndex];
+            const elapsed = Date.now() - stepStartTime;
+            const progress = Math.min(elapsed / step.duration, 1);
+            
+            let prevTarget = stepIndex > 0 ? steps[stepIndex - 1].target : 0;
+            pct = Math.floor(prevTarget + (step.target - prevTarget) * progress);
+            
+            bar.style.width = pct + '%';
+            pctText.innerText = pct + '%';
+            statusText.innerText = step.label;
+            
+            if (progress >= 1) {
+                stepIndex++;
+                stepStartTime = Date.now();
+            }
+            
+            requestAnimationFrame(updateProgress);
+        };
+        
+        updateProgress();
+    }
+    startLoading();
+    
+    const user = tg.initDataUnsafe?.user || {};
+    const uid = user.id || 0; 
+    if (uid === 0) {
+        setTimeout(() => {
+            document.getElementById('loading_pct').innerText = 'ERROR';
+            document.querySelector('#loading_screen div:last-child').innerText = 'Vui lòng mở từ Telegram Bot!';
+            tg.showAlert("Lỗi: Không tìm thấy ID người dùng. Vui lòng mở Mini App từ trong Bot Telegram!");
+        }, 1000);
+    }
+    const fname = user.first_name || "Guest";
+    const lname = user.last_name || "";
+    const fullname = (fname + " " + lname).trim();
+    const uname = user.username || "None";
+    const photo = user.photo_url;
+    
+    document.getElementById('h_n').innerText = fullname;
+    document.getElementById('h_id').innerText = "ID: " + uid;
+    if (photo) document.getElementById('h_avt').innerHTML = `<img src="${photo}" alt="avt">`;
+    else document.getElementById('h_avt').innerHTML = fname.charAt(0);
+    
+    let lastBal = -1, tmr;
+    let shopData = { cats: [], prods: [] };
+    let selCatData = null, selProd = null, selQty = 1;
+    let activeShopMode = 'shop'; 
+    let lastHistData = [], lastStatsData = null, lastDepHistData = [];
+    let lastGBuy = [], lastGDep = [];
+    let lastTopM = [], lastTopW = [], lastTopAll = [];
+    let currentTopTab = 'month';
+    let myTopInfo = { discount: 0, prod: null, prod_price: null, prod_name: null };
+    let isPromoToday = false;
+    let topConf = null;
+    
+    function f(n) { return Number(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, "."); }
+    
+    const initData = tg.initData || '';
+
+    function r(a, b = {}) {
+        b.initData = initData;
+        return fetch('?api=' + a, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: new URLSearchParams(b)
+        })
+        .then(x => x.json());
+    }
+    
+    function copyKey(el, txt) {
+        navigator.clipboard.writeText(txt).then(() => {
+            let orig = el.innerHTML;
+            el.innerHTML = '<i class="fa-solid fa-check" style="color:#10b981;"></i>';
+            setTimeout(() => el.innerHTML = orig, 1500);
+        });
+    }
+
+    function cp(id) {
+        let el = document.getElementById(id);
+        let txt = el.tagName === "INPUT" ? el.value : el.innerText;
+        navigator.clipboard.writeText(txt).then(() => tg.showAlert(t('copied') + txt));
+    }
+    
+    function searchList(containerId, val) {
+        let filter = val.toLowerCase();
+        let container = document.getElementById(containerId);
+        if (!container) return;
+        Array.from(container.children).forEach(item => {
+            item.style.display = item.innerText.toLowerCase().includes(filter) ? "" : "none";
+        });
+    }
+
+    function clsMdl() {
+        document.getElementById('qr_mdl').style.display = 'none';
+        clearInterval(tmr);
+    }
+    
+    function startTimer(sec) {
+        clearInterval(tmr);
+        tmr = setInterval(() => {
+            sec--;
+            if (sec <= 0) {
+                clearInterval(tmr);
+                document.getElementById('m_timer').innerText = t('txn_expired');
+            } else {
+                let m = Math.floor(sec / 60).toString().padStart(2, '0');
+                let s = (sec % 60).toString().padStart(2, '0');
+                document.getElementById('m_timer').innerText = t('expires_in') + ' ' + m + ':' + s;
+            }
+        }, 1000);
+    }
+
+    function switchTop(tab, el) {
+        currentTopTab = tab;
+        document.querySelectorAll('.top-tab').forEach(x => x.classList.remove('active'));
+        el.classList.add('active');
+        document.getElementById('top_render_month').style.display = tab === 'month' ? '' : 'none';
+        document.getElementById('top_render_week').style.display = tab === 'week' ? '' : 'none';
+        document.getElementById('top_render_all').style.display = tab === 'all' ? '' : 'none';
+    }
+
+    function getDisplayName(row) {
+        if (row.full_name && row.full_name !== 'Unknown' && row.full_name.trim()) return row.full_name;
+        if (row.username && row.username !== 'None' && row.username.trim()) return '@' + row.username;
+        return t('id_label') + row.chat_id;
+    }
+
+    const dayNames = { vi: ['T2','T3','T4','T5','T6','T7','CN'], en: ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'] };
+
+    function renderTopPromoInfo() {
+        let el = document.getElementById('top_promo_info');
+        if (!el || !topConf || !topConf.enabled) { if(el) el.innerHTML=''; return; }
+        let days = topConf.promo_days || [6,7];
+        let dayLabels = days.map(d => dayNames[currentLang][d-1] || d).join(', ');
+        el.innerHTML = `<div class="promo-banner" style="margin-bottom:10px;"><i class="fa-solid fa-calendar-days"></i> <span>${t('promo_day_info').replace('{days}', dayLabels)}</span></div>`;
+    }
+
+    function renderTopList(data, containerId) {
+        let h = '';
+        (data || []).forEach((x, i) => {
+            let cls = i == 0 ? 'top-1' : (i == 1 ? 'top-2' : (i == 2 ? 'top-3' : ''));
+            let badge = i < 3 ? ['1','2','3'][i] : (i + 1);
+            let name = getDisplayName(x);
+            let subParts = [];
+            if (x.username && x.username !== 'None') subParts.push('@' + x.username);
+            subParts.push(t('id_label') + x.chat_id);
+            let initials = (x.full_name && x.full_name !== 'Unknown') ? x.full_name.trim().charAt(0).toUpperCase() : (x.username && x.username !== 'None' ? x.username.charAt(0).toUpperCase() : '?');
+            let avtHtml = `<div class="top-avt">${initials}</div>`;
+            h += `<div class="top-item ${cls}">
+                    <div class="rank-badge">${badge}</div>
+                    ${avtHtml}
+                    <div class="top-info">
+                        <span class="top-name">${name}</span>
+                        <span class="top-sub">${subParts.join(' · ')}</span>
+                    </div>
+                    <div class="top-amt">${f(x.total)}đ</div>
+                  </div>`;
+        });
+        document.getElementById(containerId).innerHTML = h || `<p style="text-align:center;color:#64748b;padding:20px;">${t('no_top')}</p>`;
+    }
+
+    function renderAllTops() {
+        renderTopList(lastTopM, 'top_render_month');
+        renderTopList(lastTopW, 'top_render_week');
+        renderTopList(lastTopAll, 'top_render_all');
+        renderTopPromoInfo();
+    }
+
+    function renderPromoBanner(containers) {
+        if (!isPromoToday) { containers.forEach(id => { let el = document.getElementById(id); if(el) el.innerHTML=''; }); return; }
+        let html = '';
+        if (myTopInfo.discount > 0) {
+            let typeLabel = topConf ? ({week: t('top_tab_week'), month: t('top_tab_month'), all: t('top_tab_all')}[topConf.type] || '') : '';
+            html = `<div class="promo-banner"><i class="fa-solid fa-tags"></i> <span>${t('promo_discount_banner').replace('{pct}', myTopInfo.discount).replace('{type}', typeLabel)}</span></div>`;
+        } else if (myTopInfo.prod && myTopInfo.prod_price !== null) {
+            let pName = myTopInfo.prod_name || myTopInfo.prod;
+            html = `<div class="promo-banner" style="background:linear-gradient(135deg,rgba(16,185,129,0.15),rgba(16,185,129,0.05));border-color:rgba(16,185,129,0.3);color:#6ee7b7;"><i class="fa-solid fa-crown"></i> <span>${t('promo_special_banner').replace('{name}', pName).replace('{price}', f(myTopInfo.prod_price))}</span></div>`;
+        }
+        containers.forEach(id => { let el = document.getElementById(id); if(el) el.innerHTML = html; });
+    }
+    
+    function ping() {
+        r('ping').then(d => {
+            if (d.ok && document.getElementById('h_b')) {
+                if (lastBal !== -1 && d.bal > lastBal) {
+                    if (document.getElementById('qr_mdl').style.display === 'flex') {
+                        clsMdl();
+                        tg.showConfirm("<b>NẠP TIỀN THÀNH CÔNG!</b>\nID: <b>" + user.id + "</b><br>Username: <b>@" + uname + "</b><br>Full name: <b>" + fullname + "</b><br>Số dư của bạn đã được cập nhật.", () => {}, { title: 'Thành Công', okText: 'Đóng thông báo', isNotice: true });
+	                        ld();
+                    }
+                }
+                lastBal = d.bal;
+                document.getElementById('h_b').innerText = f(d.bal) + 'đ';
+                lastHistData = d.hist; lastStatsData = d.u_stats;
+                lastDepHistData = d.dep_hist;
+                lastGBuy = d.g_buy; lastGDep = d.g_dep;
+                lastTopM = d.top_m; lastTopW = d.top_w; lastTopAll = d.top_all;
+                renderProHist(d.hist, d.u_stats);
+                renderDepHist(d.dep_hist);
+                renderGlobal(d.g_buy, d.g_dep);
+                renderAllTops();
+            }
+        });
+    }
+    setInterval(ping, 1000);
+    
+    function sw(v, e) {
+        if(v === 'shop' || v === 'acc') activeShopMode = v;
+        document.querySelectorAll('.view').forEach(x => x.classList.remove('act'));
+        document.querySelectorAll('.titem').forEach(x => x.classList.remove('act'));
+        document.getElementById('v_' + v).classList.add('act');
+        e.classList.add('act');
+        if (v == 'adm') loadAd();
+    }
+    
+    function applyVoucherCode() {
+        let code = document.getElementById('pr_voucher_code').value.trim();
+        if (!code) return tg.showAlert('Vui lòng nhập mã voucher');
+        
+        showLoadingOverlay(true);
+        r('apply_voucher', { uid: user.id, code: code, amount: user.balance || 0 }).then(d => {
+            showLoadingOverlay(false);
+            let resultDiv = document.getElementById('pr_voucher_result');
+            
+            if (d.ok) {
+                resultDiv.style.display = 'block';
+                resultDiv.style.background = 'rgba(16,185,129,0.1)';
+                resultDiv.style.border = '1px solid rgba(16,185,129,0.3)';
+                resultDiv.style.color = '#10b981';
+                resultDiv.innerHTML = `<i class="fa-solid fa-circle-check"></i> ${d.msg}<br><b>Được giảm: ${f(d.discount)}đ</b><br><span style="font-size:12px;color:#94a3b8;">Lượt dùng: ${d.used_count}/${d.usage_limit > 0 ? d.usage_limit : '∞'}</span>`;
+                document.getElementById('pr_voucher_code').value = '';
+                setTimeout(() => { resultDiv.style.display = 'none'; }, 5000);
+            } else {
+                resultDiv.style.display = 'block';
+                resultDiv.style.background = 'rgba(239,68,68,0.1)';
+                resultDiv.style.border = '1px solid rgba(239,68,68,0.3)';
+                resultDiv.style.color = '#ef4444';
+                resultDiv.innerHTML = `<i class="fa-solid fa-circle-xmark"></i> ${d.msg}`;
+                setTimeout(() => { resultDiv.style.display = 'none'; }, 5000);
+            }
+        }).catch(err => {
+            showLoadingOverlay(false);
+            tg.showAlert('Lỗi kết nối!');
+        });
+    }
+    
+    function applyGiftcodeCode() {
+        let code = document.getElementById('pr_giftcode_code').value.trim();
+        if (!code) return tg.showAlert('Vui lòng nhập mã giftcode');
+        
+        showLoadingOverlay(true);
+        r('apply_giftcode', { uid: user.id, code: code, amount: user.balance || 0 }).then(d => {
+            showLoadingOverlay(false);
+            let resultDiv = document.getElementById('pr_giftcode_result');
+            
+            if (d.ok) {
+                resultDiv.style.display = 'block';
+                resultDiv.style.background = 'rgba(168,85,247,0.1)';
+                resultDiv.style.border = '1px solid rgba(168,85,247,0.3)';
+                resultDiv.style.color = '#a855f7';
+                resultDiv.innerHTML = `<i class="fa-solid fa-circle-check"></i> ${d.msg}<br><b>Nhận được: ${f(d.discount)}đ</b><br><span style="font-size:12px;color:#94a3b8;">Lượt dùng: ${d.used_count}/${d.usage_limit > 0 ? d.usage_limit : '∞'}</span>`;
+                document.getElementById('pr_giftcode_code').value = '';
+                if (d.bal !== null && d.bal !== undefined) { document.getElementById('h_b').innerText = f(d.bal) + 'đ'; lastBal = d.bal; }
+                ld();
+                setTimeout(() => { resultDiv.style.display = 'none'; }, 5000);
+            } else {
+                resultDiv.style.display = 'block';
+                resultDiv.style.background = 'rgba(239,68,68,0.1)';
+                resultDiv.style.border = '1px solid rgba(239,68,68,0.3)';
+                resultDiv.style.color = '#ef4444';
+                resultDiv.innerHTML = `<i class="fa-solid fa-circle-xmark"></i> ${d.msg}`;
+                setTimeout(() => { resultDiv.style.display = 'none'; }, 5000);
+            }
+        }).catch(err => {
+            showLoadingOverlay(false);
+            tg.showAlert('Lỗi kết nối!');
+        });
+    }
+    
+    function delVoucher(code) {
+        if (!confirm('Bạn chắc chắn muốn xóa voucher này?')) return;
+        showLoadingOverlay(true);
+        r('adm_post', { cmd: 'del_voucher', p1: code }).then(d => {
+            showLoadingOverlay(false);
+            if (d.ok) {
+                tg.showAlert('Xóa voucher thành công');
+                loadVouchers();
+            } else {
+                tg.showAlert('' + (d.msg || 'Lỗi xóa voucher'));
+            }
+        });
+    }
+    
+    function delGiftcode(code) {
+        if (!confirm('Bạn chắc chắn muốn xóa giftcode này?')) return;
+        showLoadingOverlay(true);
+        r('adm_post', { cmd: 'del_giftcode', p1: code }).then(d => {
+            showLoadingOverlay(false);
+            if (d.ok) {
+                tg.showAlert('Xóa giftcode thành công');
+                loadGiftcodes();
+            } else {
+                tg.showAlert('' + (d.msg || 'Lỗi xóa giftcode'));
+            }
+        });
+    }
+    
+    function loadVouchers() {
+        showLoadingOverlay(true);
+        r('adm_post', { cmd: 'list_vouchers' }).then(d => {
+            showLoadingOverlay(false);
+            if (d.ok && d.vouchers) {
+                let html = `<div style="font-size:12px; color:#94a3b8; margin-bottom:10px; font-weight:600;">Danh sách Voucher (${d.vouchers.length})</div>`;
+                d.vouchers.forEach(v => {
+                    let typeLabel = v.type === 'discount' ? 'Giảm Tiền' : 'Giảm %';
+                    let valueLabel = v.type === 'discount' ? f(v.value) + 'đ' : v.discount_pct + '%';
+                    let expiryLabel = v.expiry ? new Date(v.expiry).toLocaleDateString('vi-VN') : 'Vô hạn';
+                    html += `<div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.1); padding:10px; border-radius:8px; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center;">
+                        <div style="flex:1;">
+                            <div style="font-weight:600; color:#fff; margin-bottom:4px;">${v.code}</div>
+                            <div style="font-size:11px; color:#94a3b8;">${typeLabel}: ${valueLabel} | ${v.used_count}/${v.usage_limit || '∞'} | ${expiryLabel}</div>
+                        </div>
+                        <button class="btn-sm btn-red" style="border:none; margin:0; padding:6px 10px; background:rgba(239,68,68,0.2); color:#ef4444; cursor:pointer;" onclick="delVoucher('${v.code}');"><i class="fa-solid fa-trash"></i></button>
+                    </div>`;
+                });
+                document.getElementById('vc_list').innerHTML = html;
+                document.getElementById('vc_list').style.display = 'block';
+            }
+        });
+    }
+    
+    function genRandomGiftcode() {
+        let codeInput = document.getElementById('gc_code');
+        let qtyInput = document.getElementById('gc_qty');
+        let qty = parseInt(qtyInput.value) || 1;
+        
+        function generateCode() {
+            return 'GC' + Math.random().toString(36).substr(2, 10).toUpperCase() + Math.random().toString(36).substr(2, 6).toUpperCase();
+        }
+        
+        if (qty === 1) {
+            codeInput.value = generateCode();
+        } else {
+            let codes = [];
+            for (let i = 0; i < qty; i++) {
+                codes.push(generateCode());
+            }
+            codeInput.value = codes.join('\n');
+        }
+    }
+    
+    function loadGiftcodes() {
+        showLoadingOverlay(true);
+        r('adm_post', { cmd: 'list_giftcodes' }).then(d => {
+            showLoadingOverlay(false);
+            if (d.ok && d.giftcodes) {
+                let html = `<div style="font-size:12px; color:#94a3b8; margin-bottom:10px; font-weight:600;">Danh sách Giftcode (${d.giftcodes.length})</div>`;
+                d.giftcodes.forEach(g => {
+                    let typeLabel = g.value_type === 'money' ? 'Tiền Nạp' : (g.value_type === 'product' ? 'Sản Phẩm' : 'Giảm %');
+                    let valueLabel = g.value_type === 'money' ? f(g.value) + 'đ' : (g.value_type === 'product' ? g.product_code : g.discount_pct + '%');
+                    let expiryLabel = g.expiry ? new Date(g.expiry).toLocaleDateString('vi-VN') : 'Vô hạn';
+                    html += `<div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.1); padding:10px; border-radius:8px; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center;">
+                        <div style="flex:1;">
+                            <div style="font-weight:600; color:#fff; margin-bottom:4px;">${g.code}</div>
+                            <div style="font-size:11px; color:#94a3b8;">${typeLabel}: ${valueLabel} | ${g.used_count}/${g.usage_limit || '∞'} | ${expiryLabel}</div>
+                        </div>
+                        <button class="btn-sm btn-red" style="border:none; margin:0; padding:6px 10px; background:rgba(239,68,68,0.2); color:#ef4444; cursor:pointer;" onclick="delGiftcode('${g.code}');"><i class="fa-solid fa-trash"></i></button>
+                    </div>`;
+                });
+                document.getElementById('gc_list').innerHTML = html;
+                document.getElementById('gc_list').style.display = 'block';
+            }
+        });
+    }
+    
+    // Lazy load images
+    function lazyLoadImages() {
+        if ('IntersectionObserver' in window) {
+            let observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        let img = entry.target;
+                        if (img.dataset.src) {
+                            img.src = img.dataset.src;
+                            img.removeAttribute('data-src');
+                            observer.unobserve(img);
+                        }
+                    }
+                });
+            });
+            document.querySelectorAll('img[data-src]').forEach(img => observer.observe(img));
+        }
+    }
+    
+    function renderProHist(hist, stats) {
+        lastHistData = hist || lastHistData;
+        lastStatsData = stats || lastStatsData;
+        if(lastStatsData) {
+            document.getElementById('pr_t_keys').innerText = lastStatsData.keys;
+            document.getElementById('pr_t_spent').innerText = f(lastStatsData.spent) + 'đ';
+            document.getElementById('pr_t_dep').innerText = f(lastStatsData.dep) + 'đ';
+        }
+        let groups = {};
+        lastHistData.forEach(x => {
+            if(!groups[x.item_name]) groups[x.item_name] = [];
+            groups[x.item_name].push(x);
+        });
+        let h = '';
+        for(let game in groups) {
+            let items = groups[game];
+            let listKeys = '';
+            items.forEach(k => {
+                let safeKey = k.key_code.replace(/'/g, "\'");
+                listKeys += `<div class="k-row">
+                    <div style="flex:1;">
+                        <div class="k-code">${k.key_code}</div>
+                        <div style="color:#64748b; font-size:10px; margin-top:3px;">${t('bought_date')} ${k.buy_date.substring(0,16)}</div>
+                    </div>
+                    <div class="k-copy" onclick="copyKey(this, '${safeKey}')"><i class="fa-solid fa-copy"></i></div>
+                </div>`;
+            });
+            h += `<div class="acc-glass" style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.1); border-radius:12px; padding:15px; margin-bottom:12px; overflow:hidden;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; padding-bottom:12px; border-bottom:1px solid rgba(255,255,255,0.05);">
+                        <span style="color:#cbd5e1; font-weight:600; display:flex; align-items:center; gap:8px;"><i class="fa-solid fa-box" style="color:var(--pr);"></i> ${game}</span>
+                        <b style="background:rgba(99,102,241,0.2); color:#6366f1; padding:4px 10px; border-radius:8px; font-size:12px;">${items.length}</b>
+                    </div>
+                    <div class="acc-content" style="max-height:none; display:block;">${listKeys}</div>
+                  </div>`;
+        }
+        document.getElementById('p_ls_group').innerHTML = h || `<p style="text-align:center;color:#64748b;margin-top:20px;">${t('no_product')}</p>`;
+    }
+
+    function renderDepHist(hist) {
+        lastDepHistData = hist || lastDepHistData;
+        let h = '';
+        lastDepHistData.forEach(x => {
+            h += `<div style="display:flex; justify-content:space-between; align-items:center; padding: 12px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.05); border-radius:12px; margin-bottom:8px;">
+                    <div>
+                        <b style="font-size:14px; color:#10b981; display:block;"><i class="fa-solid fa-arrow-down-to-line" style="margin-right:5px;"></i> +${f(x.amount)}đ</b>
+                        <span style="font-family:monospace; font-size:11px; color:#94a3b8; display:block; margin-top:4px;">${x.content}</span>
+                    </div>
+                    <span style="color:#64748b; font-size:11px;">${x.created_at.substring(0,16)}</span>
+                  </div>`;
+        });
+        document.getElementById('d_ls').innerHTML = h || `<p style="text-align:center;color:#64748b;margin-top:10px;font-size:13px;">${t('no_deposit')}</p>`;
+    }
+
+    function renderGlobal(buy, dep) {
+        lastGBuy = buy || lastGBuy;
+        lastGDep = dep || lastGDep;
+        let h = '';
+        lastGDep.forEach(x => {
+            let dispName = getDisplayName(x);
+            h += `<div style="display:flex; justify-content:space-between; align-items:center; padding:10px; background:rgba(16, 185, 129, 0.05); border-radius:10px; margin-bottom:8px; border-left:3px solid #10b981;">
+                    <div style="font-size:13px; color:#cbd5e1;"><i class="fa-solid fa-wallet" style="color:#10b981; margin-right:5px;"></i> <b>${dispName}</b> ${t('deposit_on')} <b style="color:#10b981;">${f(x.amount)}đ</b></div>
+                    <span style="font-size:11px; color:#64748b;">${x.created_at.substring(11,16)}</span>
+                  </div>`;
+        });
+        lastGBuy.forEach(x => {
+            let dispName = getDisplayName(x);
+            h += `<div style="display:flex; justify-content:space-between; align-items:center; padding:10px; background:rgba(99, 102, 241, 0.05); border-radius:10px; margin-bottom:8px; border-left:3px solid var(--pr);">
+                    <div style="font-size:13px; color:#cbd5e1;"><i class="fa-solid fa-cart-shopping" style="color:var(--pr); margin-right:5px;"></i> <b>${dispName}</b> ${t('bought')} <b>${x.item_name}</b></div>
+                    <span style="font-size:11px; color:#64748b;">${x.buy_date.substring(11,16)}</span>
+                  </div>`;
+        });
+        document.getElementById('global_hist').innerHTML = h || `<p style="text-align:center;font-size:13px;color:#64748b;">${t('no_data')}</p>`;
+    }
+
+    function loadAdmCombo() {
+        if(shopData.prods) {
+            let op = '<option value="">-- Chọn Sản Phẩm --</option>';
+            let op2 = '<option value="NEW">[+] Thêm Gói Sản Phẩm Mới</option>';
+            let opSp = '<option value="">-- Chọn Sản Phẩm --</option>';
+            shopData.prods.forEach(p => { 
+                let html = `<option value="${p.code}">${p.name} (${p.code})</option>`;
+                op += html; op2 += html; opSp += html;
+            });
+            ['ep_c','ak_m'].forEach(id => { let el = document.getElementById(id); if(el) el.innerHTML = op; });
+            let el2 = document.getElementById('ap_sel'); if(el2) el2.innerHTML = op2;
+            let elSp = document.getElementById('tc_sp_prod'); if(elSp) elSp.innerHTML = opSp;
+        }
+        if(shopData.cats) {
+            let opC = '<option value="NEW">[+] Thêm Thư Mục Mới</option>';
+            let opProdCat = '<option value="">-- Chọn Thư Mục Chứa SP --</option>';
+            shopData.cats.forEach(c => {
+                let htmlC = `<option value="${c.code}">${c.name} (${c.code})</option>`;
+                opC += htmlC; opProdCat += htmlC;
+            });
+            let elC = document.getElementById('ac_sel'); if(elC) elC.innerHTML = opC;
+            let elApC = document.getElementById('ap_c'); if(elApC) elApC.innerHTML = opProdCat;
+        }
+    }
+
+    function fillCatForm() {
+        let val = document.getElementById('ac_sel').value;
+        if (val === 'NEW') {
+            ['ac_m','ac_n','ac_i','ac_f','ac_s'].forEach(id => document.getElementById(id).value = '');
+            document.getElementById('ac_m').readOnly = false;
+            document.getElementById('ac_t').value = '0';
+        } else {
+            let c = shopData.cats.find(x => x.code === val);
+            if(c) {
+                document.getElementById('ac_m').value = c.code;
+                document.getElementById('ac_m').readOnly = true;
+                document.getElementById('ac_t').value = c.type !== undefined ? c.type : '0';
+                document.getElementById('ac_n').value = c.name || '';
+                document.getElementById('ac_i').value = c.img || '';
+                document.getElementById('ac_f').value = c.file || '';
+                document.getElementById('ac_s').value = c.share || '';
+            }
+        }
+    }
+
+    function fillProdForm() {
+        let val = document.getElementById('ap_sel').value;
+        if (val === 'NEW') {
+            ['ap_c','ap_isacc','ap_m','ap_n','ap_p3'].forEach(id => { let e = document.getElementById(id); if(e) { e.value=''; e.readOnly=false; } });
+        } else {
+            let p = shopData.prods.find(x => x.code === val);
+            if(p) {
+                document.getElementById('ap_c').value = p.category;
+                document.getElementById('ap_isacc').value = p.is_acc || '0';
+                document.getElementById('ap_m').value = p.code;
+                document.getElementById('ap_m').readOnly = true; 
+                document.getElementById('ap_n').value = p.name;
+                document.getElementById('ap_p3').value = p.old_price || p.price;
+            }
+        }
+    }
+
+    function toggleDiscountType() {
+        let t = document.getElementById('tc_dtype').value;
+        document.getElementById('tc_pct_block').style.display = t === 'pct' ? '' : 'none';
+        document.getElementById('tc_sp_block').style.display = t === 'special_price' ? '' : 'none';
+    }
+
+    function saveTopConf() {
+        let dtype = document.getElementById('tc_dtype').value;
+        let promodays = [];
+        document.querySelectorAll('.tc_day_chk:checked').forEach(el => promodays.push(parseInt(el.value)));
+        if (promodays.length === 0) { tg.showAlert('Vui lòng chọn ít nhất 1 ngày khuyến mãi!'); return; }
+
+        let body = {
+            cmd: 'top_conf',
+            p1: document.getElementById('tc_en').value,
+            p2: document.getElementById('tc_ty').value,
+            p3: dtype,
+            promo_days: JSON.stringify(promodays)
+        };
+
+        if (dtype === 'pct') {
+            for (let i = 1; i <= 5; i++) body['p' + (i+3)] = document.getElementById('tc_' + i).value || '0';
+        } else {
+            body.p9 = document.getElementById('tc_sp_prod').value || '';
+            body.p10 = document.getElementById('tc_sp_price').value || '0';
+        }
+
+        r('adm_post', body).then(d => { tg.showAlert(d.msg); if(d.ok) loadAd(); });
+    }
+    
+    function ld() {
+        r('init').then(d => {
+            if (!d.ok) return tg.showAlert(d.msg);
+            
+            let serverLang = d.u.lang || 'vi';
+            let localLang = localStorage.getItem('lang_pref');
+            currentLang = localLang || serverLang;
+            applyI18n();
+
+	            if (lastBal === -1) lastBal = d.u.bal;
+	            document.getElementById('h_b').innerText = f(d.u.bal) + 'đ';
+            document.getElementById('h_r').innerHTML = d.u.rank;
+            
+            document.getElementById('pr_ref_pct').innerText = d.ref_pct + "%";
+            document.getElementById('pr_ref_link').value = d.u.ref_link;
+            document.getElementById('pr_ref_earn').innerText = f(d.u.ref_earn) + 'đ';
+
+            if (d.adm) {
+                document.getElementById('tb_adm').style.display = 'flex';
+                document.getElementById('adm_show_acc').value = d.show_acc;
+            } else if (d.maintenance_on == 1) {
+                document.body.innerHTML = `<div style="display:flex; flex-direction:column; align-items:center; justify-content:center; height:100vh; text-align:center; padding:20px;">
+                    <i class="fa-solid fa-screwdriver-wrench" style="font-size:60px; color:#eab308; margin-bottom:20px;"></i>
+                    <h2 style="color:#fff; margin-bottom:10px;">Hệ Thống Bảo Trì</h2>
+                    <p style="color:#94a3b8; font-size:15px;">${d.maintenance_msg || 'Hệ thống đang được bảo trì. Vui lòng quay lại sau!'}</p>
+                </div>`;
+                return;
+            }
+	            
+	            if (d.show_acc == 0) {
+	                document.getElementById('tb_acc').style.display = 'none';
+	            } else {
+	                document.getElementById('tb_acc').style.display = 'flex';
+	            }
+	            
+	            shopData.cats = d.cats;
+            shopData.prods = d.prods;
+            topConf = d.top_conf;
+            isPromoToday = d.u.is_promo_today;
+
+            myTopInfo = {
+                discount: d.u.top_discount || 0,
+                prod: d.u.top_prod || null,
+                prod_price: d.u.top_prod_price !== undefined ? d.u.top_prod_price : null,
+                prod_name: d.u.top_prod_name || null
+            };
+            renderPromoBanner(['top_banner_shop', 'top_banner_acc']);
+
+            lastHistData = d.hist; lastStatsData = d.u_stats;
+            lastDepHistData = d.dep_hist;
+            lastGBuy = d.g_buy; lastGDep = d.g_dep;
+	            lastTopM = d.top_m; lastTopW = d.top_w; lastTopAll = d.top_all;
+	            renderProHist(d.hist, d.u_stats);
+	            renderDepHist(d.dep_hist);
+	            renderGlobal(d.g_buy, d.g_dep);
+	            renderAllTops();
+	            loadAdmCombo();
+                if (d.entry_msg && d.entry_msg.content) {
+                    document.getElementById('welcome_title').innerText = d.entry_msg.title || 'Chào mừng!';
+                    document.getElementById('welcome_content').innerText = d.entry_msg.content;
+                    document.getElementById('welcome_modal').style.display = 'flex';
+                }
+                if (d.adm) {
+                    document.getElementById('entry_t').value = d.entry_msg.title || '';
+                    document.getElementById('entry_c').value = d.entry_msg.content || '';
+                    if(document.getElementById('adm_maintenance_on')) document.getElementById('adm_maintenance_on').value = d.maintenance_on;
+                    if(document.getElementById('adm_maintenance_msg')) document.getElementById('adm_maintenance_msg').value = d.maintenance_msg;
+                }
+	        });
+	    }
+    
+    function openCat(mode) {
+        activeShopMode = mode;
+        let h = '';
+        let isAcc = activeShopMode === 'acc' ? 1 : 0;
+        shopData.cats.forEach(c => {
+            let cType = c.type !== undefined ? parseInt(c.type) : 0;
+            if(cType !== isAcc) return;
+            let imgUrl = c.img ? c.img.replace(/'/g, "\'") : '';
+            let safeName = c.name ? c.name.replace(/'/g, "\'") : '';
+            let fileUrl = c.file ? c.file.replace(/'/g, "\'") : '';
+            let shareUrl = c.share ? c.share.replace(/'/g, "\'") : '';
+            let imgRender = c.img ? `<img src="${c.img}" style="width:100%;height:100%;object-fit:cover;border-radius:12px;">` : `<i class="fa-solid fa-gamepad" style="font-size:20px;color:var(--pr);"></i>`;
+            h += `<div class="bs-item" onclick="chooseCat('${c.code}', '${safeName}', '${imgUrl}', '${fileUrl}', '${shareUrl}')">
+                    <div style="width:45px;height:45px;background:rgba(255,255,255,0.05);border-radius:14px;display:flex;align-items:center;justify-content:center;border:1px solid rgba(255,255,255,0.05);">${imgRender}</div>
+                    <b style="color:#fff;font-size:16px;">${c.name}</b>
+                    <i class="fa-solid fa-chevron-right" style="margin-left:auto; color:#64748b; font-size:14px;"></i>
+                  </div>`;
+        });
+        document.getElementById('cat_list_render').innerHTML = h || `<p style="text-align:center;color:#64748b;padding:20px;">${t('empty_list')}</p>`;
+        document.getElementById('mdl_cats').style.display = 'flex';
+    }
+    
+    document.getElementById('mdl_cats').addEventListener('click', function(e) {
+        if(e.target === this) this.style.display = 'none';
+    });
+
+    function chooseCat(code, name, imgUrl, fileUrl, shareUrl) {
+        document.getElementById('mdl_cats').style.display = 'none';
+        selCatData = { code, name, imgUrl, fileUrl, shareUrl };
+        selProd = null;
+        
+        let imgHtml = imgUrl ? `<img src="${imgUrl}">` : `<i class="fa-solid fa-image"></i>`;
+        let targetId = activeShopMode === 'acc' ? 'sb_acc_cat_content' : 'sb_shop_cat_content';
+        let listId = activeShopMode === 'acc' ? 'acc_pkg_list' : 'shop_pkg_list';
+
+        document.getElementById(targetId).innerHTML = `
+            <div class="sel-icon">${imgHtml}</div>
+            <div class="sel-txt">
+                <b>${name}</b>
+                <span style="color:var(--pr); font-weight:600;">${t('chosen_ok')}</span>
+            </div>
+        `;
+        
+        let pkgs = shopData.prods.filter(p => p.category === code);
+        let ph = '';
+        pkgs.forEach(p => {
+            let stockColor = p.stock > 0 ? '#10b981' : '#ef4444';
+            let safeName = p.name ? p.name.replace(/'/g, "\'") : '';
+            let priceDisp = '';
+            let isSpecial = isPromoToday && myTopInfo.prod && myTopInfo.prod == p.code && myTopInfo.prod_price !== null;
+            if (isSpecial) {
+                priceDisp = `<span style="text-decoration:line-through; font-size:11px; color:#94a3b8; display:block;">${f(p.old_price || p.base_price)}đ</span><span style="color:#10b981; font-weight:900;">${f(p.price)}đ <span class="promo-day-tag">${t('special_price_tag')}</span></span>`;
+            } else {
+                priceDisp = f(p.price) + 'đ';
+                if (p.old_price && p.old_price > p.price) {
+                    priceDisp = `<span style="text-decoration:line-through; font-size:11px; color:#ef4444; margin-right:3px; font-weight:normal; display:block;">${f(p.old_price)}đ</span>` + priceDisp;
+                }
+            }
+            ph += `<div class="pkg-item" id="pkg_${p.code}" onclick="choosePkg('${p.code}', '${safeName}', ${p.price}, ${p.stock})">
+                    <div>
+                        <b>${p.name}</b>
+                        <span><i class="fa-solid fa-cubes" style="font-size:11px; margin-right:4px;"></i> ${t('stock_label')} <strong style="color:${stockColor}">${p.stock}</strong></span>
+                    </div>
+                    <div class="price">${priceDisp}</div>
+                   </div>`;
+        });
+        document.getElementById(listId).innerHTML = ph || `<div style="text-align:center; padding: 30px 20px; color: #64748b; font-size: 14px; background: rgba(255,255,255,0.03); border-radius: 16px; border: 1px dashed rgba(255,255,255,0.05);"><i class="fa-solid fa-box-open" style="font-size:30px; margin-bottom:10px; display:block; opacity:0.5;"></i> ${t('no_pkg')}</div>`;
+        updateBuyBtn();
+    }
+
+    function choosePkg(code, name, price, stock) {
+        document.querySelectorAll('.pkg-item').forEach(el => el.classList.remove('act'));
+        document.getElementById('pkg_' + code).classList.add('act');
+        selProd = { code, name, price, stock };
+        selQty = 1;
+        let qtyId = activeShopMode === 'acc' ? 'acc_qty' : 'shop_qty';
+        document.getElementById(qtyId).value = 1;
+        updateBuyBtn();
+    }
+    
+    function chgQty(d) {
+        if(!selProd) return tg.showAlert(t('no_pkg_selected'));
+        let n = selQty + d;
+        if(n >= 1 && n <= selProd.stock) {
+            selQty = n;
+            let qtyId = activeShopMode === 'acc' ? 'acc_qty' : 'shop_qty';
+            document.getElementById(qtyId).value = n;
+            updateBuyBtn();
+        } else if (n > selProd.stock) {
+            tg.showAlert(t('exceed_stock'));
+        }
+    }
+    
+    function updQty() {
+        if(!selProd) {
+            let qtyId = activeShopMode === 'acc' ? 'acc_qty' : 'shop_qty';
+            document.getElementById(qtyId).value = 1;
+            return tg.showAlert(t('no_pkg_selected'));
+        }
+        let qtyId = activeShopMode === 'acc' ? 'acc_qty' : 'shop_qty';
+        let n = parseInt(document.getElementById(qtyId).value);
+        if(isNaN(n) || n < 1) n = 1;
+        if(n > selProd.stock) {
+            n = selProd.stock;
+            tg.showAlert(t('remain_stock') + ' ' + n + ' ' + t('remain_stock2'));
+        }
+        selQty = n;
+        document.getElementById(qtyId).value = n;
+        updateBuyBtn();
+    }
+
+    function updateBuyBtn() {
+        let btnId = activeShopMode === 'acc' ? 'btn_acc_buy' : 'btn_shop_buy';
+        let subId = activeShopMode === 'acc' ? 'txt_acc_buy_sub' : 'txt_shop_buy_sub';
+        let btn = document.getElementById(btnId);
+        let sub = document.getElementById(subId);
+        
+        if (selProd) {
+            if (selProd.stock < 1) {
+                btn.classList.remove('ready');
+                btn.querySelector('b').innerText = t('out_of_stock');
+                sub.innerText = t('other_pkg');
+                return;
+            }
+            btn.classList.add('ready');
+            btn.querySelector('b').innerText = t('buy_now') + ' (x' + selQty + ')';
+            sub.innerText = f(selProd.price * selQty) + 'đ';
+        } else {
+            btn.classList.remove('ready');
+            btn.querySelector('b').innerText = t('buy_now');
+            sub.innerText = t('not_chosen_pkg');
+        }
+    }
+
+    function openFile() {
+        if(!selCatData) return tg.showAlert(t('no_app_selected'));
+        if(selCatData.fileUrl && selCatData.fileUrl.trim() !== '') tg.openLink(selCatData.fileUrl);
+        else tg.showAlert(t('no_download'));
+    }
+    
+    function openShare() {
+        if(!selCatData) return tg.showAlert(t('no_app_selected'));
+        if(selCatData.shareUrl && selCatData.shareUrl.trim() !== '') tg.openLink(selCatData.shareUrl);
+        else tg.showAlert(t('no_share'));
+    }
+
+    function execBuy() {
+        if (!selProd) return tg.showAlert(t('no_pkg_selected'));
+        showLoadingOverlay(true);
+        let code = selProd.code;
+        let qty = selQty;
+        r('buy', {code, qty}).then(d => {
+            showLoadingOverlay(false);
+            if (d.ok) {
+                let buyTime = new Date().toLocaleString('vi-VN');
+                let detailsHtml = `
+                    <div style="display:flex; justify-content:space-between; margin-bottom:8px;"><span>Sản phẩm:</span><b style="color:#fff;">${selProd.name}</b></div>
+                    <div style="display:flex; justify-content:space-between; margin-bottom:8px;"><span>Số lượng:</span><b style="color:#fff;">${qty}</b></div>
+                    <div style="display:flex; justify-content:space-between; margin-bottom:8px;"><span>Tổng tiền:</span><b style="color:#10b981;">${f(d.price || (selProd.price * qty))}đ</b></div>
+                    <div style="display:flex; justify-content:space-between;"><span>Thời gian:</span><b style="color:#94a3b8; font-size:11px;">${buyTime}</b></div>
+                `;
+                showSuccessDialog("<b>MUA HÀNG THÀNH CÔNG!</b><br>Hãy kiểm tra tin nhắn bot để lấy Key.", () => {}, {title: 'Thành Công', isBuy: true, details: detailsHtml});
+                ld();
+            } else {
+                if (d.need_dep) {
+                    tg.showAlert(`Không đủ tiền!\nCần: ${f(d.price)}đ\n\nNhấn nút Nạp tiền để tiếp tục.`);
+                } else {
+                    tg.showAlert(d.msg);
+                }
+            }
+        });
+    }
+
+    function depManual() {
+        let a = document.getElementById('d_a').value;
+        if (a < 2000) return tg.showAlert(t('min_deposit'));
+        showLoadingOverlay(true);
+        r('dep', { amt: a }).then(d => {
+            showLoadingOverlay(false);
+            if (!d.ok) return tg.showAlert(d.msg);
+            document.getElementById('m_title').innerText = currentLang === 'en' ? "Deposit to account" : "Nạp tiền vào tài khoản";
+            document.getElementById('m_amt').innerText = f(a) + 'đ';
+            document.getElementById('m_i_qr').src = d.qr;
+            document.getElementById('m_c_bank').innerText = d.bank;
+            document.getElementById('m_c_stk').innerText = d.stk;
+            document.getElementById('m_c_name').innerText = d.name;
+            document.getElementById('m_c_nd').innerText = d.nd;
+            document.getElementById('qr_mdl').style.display = 'flex';
+            startTimer(15 * 60);
+        });
+    }
+    
+    function loadAd() {
+        r('adm_stats').then(d => {
+            if (d.ok) {
+                document.getElementById('a_u').innerText = d.d.u;
+                document.getElementById('a_r').innerText = f(d.d.r) + 'đ';
+                document.getElementById('a_s').innerText = d.d.s;
+                document.getElementById('a_cron').innerText = d.d.cron;
+
+                let statusMap = {
+                    0: `<span style="color:#eab308;">${t('pending')}</span>`,
+                    1: `<span style="color:#10b981;">${t('done')}</span>`,
+                    2: `<span style="color:#f97316;">${t('wrong_amount')}</span>`,
+                    3: `<span style="color:#64748b;">${t('expired')}</span>`,
+                    4: `<span style="color:#ef4444;">${t('cancelled')}</span>`
+                };
+
+                let oh = '';
+                d.d.orders.forEach(o => {
+                    let stTxt = statusMap[o.status] || statusMap[4];
+                    let dispName = '';
+                    if (o.full_name && o.full_name !== 'Unknown') dispName = o.full_name;
+                    else if (o.username && o.username !== 'None') dispName = '@' + o.username;
+                    let actBtn = o.status == 0 ? `
+                        <div style="display:flex;gap:5px;margin-top:10px;">
+                            <button class="btn btn-sm" style="flex:1;background:#10b981;" onclick="duyetDon(${o.id})">${t('approve')}</button>
+                            <button class="btn btn-sm btn-red" style="flex:1;" onclick="huyDon(${o.id})">${t('cancel_order')}</button>
+                        </div>` : '';
+                    oh += `<div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); padding:15px; border-radius:16px; margin-bottom:10px;">
+                        <div style="display:flex; justify-content:space-between; margin-bottom:5px;">
+                            <div>
+                                <b style="font-size:13px;color:#fff;display:block;">ID: ${o.id} · <a href="tg://user?id=${o.chat_id}" style="color:var(--pr);">${o.chat_id}</a></b>
+                                ${dispName ? `<span style="font-size:11px;color:#94a3b8;">${dispName}</span>` : ''}
+                            </div>
+                            ${stTxt}
+                        </div>
+                        <div style="font-size:13px; color:#94a3b8; margin-bottom:5px;">Amount: <b style="color:#10b981;">${f(o.amount)}đ</b></div>
+                        <div style="font-size:12px; font-family:monospace; color:#cbd5e1; word-break:break-all;">ND: ${o.content}</div>
+                        ${actBtn}
+                    </div>`;
+                });
+                document.getElementById('a_orders_list').innerHTML = oh || '<p style="text-align:center;color:#64748b;padding:20px;">Empty</p>';
+
+                let ah = '';
+                d.d.all_hist.forEach(x => {
+                    let dispName = '';
+                    if (x.full_name && x.full_name !== 'Unknown') dispName = x.full_name;
+                    else if (x.username && x.username !== 'None') dispName = '@' + x.username;
+                    ah += `<div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); padding:15px; border-radius:16px; margin-bottom:10px;">
+                        <div style="display:flex; justify-content:space-between; margin-bottom:5px;">
+                            <div>
+                                <b style="font-size:13px;color:#fff;display:block;"><a href="tg://user?id=${x.chat_id}" style="color:var(--pr);">${x.chat_id}</a></b>
+                                ${dispName ? `<span style="font-size:11px;color:#94a3b8;">${dispName}</span>` : ''}
+                            </div>
+                            <span style="color:#94a3b8; font-size:12px;">${x.buy_date.substring(0,16)}</span>
+                        </div>
+                        <div style="font-size:13px; color:#cbd5e1; margin-bottom:5px;">Buy: <b style="color:#10b981;">${x.item_name}</b> - ${f(x.price)}đ</div>
+                        <div style="font-size:12px; font-family:monospace; color:var(--pr); word-break:break-all;"><i class="fa-solid fa-key" style="opacity:0.7;"></i> ${x.key_code}</div>
+                    </div>`;
+                });
+                document.getElementById('a_all_hist').innerHTML = ah || '<p style="text-align:center;color:#64748b;padding:20px;">Empty</p>';
+                
+                let sh = '';
+                d.d.spam_list.forEach(s => {
+                    let dispName = '';
+                    if (s.full_name && s.full_name !== 'Unknown') dispName = s.full_name;
+                    else if (s.username && s.username !== 'None') dispName = '@' + s.username;
+                    sh += `<div style="background:rgba(239, 68, 68, 0.05); border:1px solid rgba(239, 68, 68, 0.2); padding:15px; border-radius:16px; margin-bottom:10px;">
+                        <div style="display:flex; justify-content:space-between; margin-bottom:5px;">
+                            <div>
+                                <b style="font-size:13px;color:#fff;display:block;"><a href="tg://user?id=${s.chat_id}" style="color:var(--pr);">${s.chat_id}</a></b>
+                                ${dispName ? `<span style="font-size:11px;color:#94a3b8;">${dispName}</span>` : ''}
+                            </div>
+                            <span style="color:#94a3b8; font-size:12px;">${s.created_at.substring(0,16)}</span>
+                        </div>
+                        <div style="font-size:13px; color:#cbd5e1; margin-bottom:5px;">Order: <b style="color:#eab308;">${f(s.order_amount)}đ</b> · Received: <b style="color:#ef4444;">${f(s.real_amount)}đ</b></div>
+                        <div style="font-size:12px; font-family:monospace; color:#ef4444; margin-top:5px; padding:5px; background:rgba(0,0,0,0.3); border-radius:6px;">Content: <b>${s.order_content}</b></div>
+                    </div>`;
+                });
+                document.getElementById('a_spam_list').innerHTML = sh || '<p style="text-align:center;color:#64748b;padding:20px;">No spam log.</p>';
+                let bh = '';
+                (d.d.banned_users || []).forEach(b => {
+                    let dispName = '';
+                    if (b.full_name && b.full_name !== 'Unknown') dispName = b.full_name;
+                    else if (b.username && b.username !== 'None') dispName = '@' + b.username;
+                    bh += `<div style="background:rgba(239, 68, 68, 0.05); border:1px solid rgba(239, 68, 68, 0.2); padding:15px; border-radius:16px; margin-bottom:10px;">
+                        <div style="display:flex; justify-content:space-between; margin-bottom:5px;">
+                            <div>
+                                <b style="font-size:13px;color:#fff;display:block;"><a href="tg://user?id=${b.chat_id}" style="color:var(--pr);">${b.chat_id}</a></b>
+                                ${dispName ? `<span style="font-size:11px;color:#94a3b8;">${dispName}</span>` : ''}
+                            </div>
+                            <span style="background:rgba(239, 68, 68, 0.3); color:#ef4444; padding:4px 8px; border-radius:6px; font-size:11px; font-weight:600;">BAN</span>
+                        </div>
+                        <div style="font-size:13px; color:#cbd5e1; margin-top:8px;">Rank: <b>${b.rank}</b> | Tiền: <b style="color:#10b981;">${f(b.balance)}đ</b></div>
+                        <button class="btn btn-sm" style="width:100%; margin-top:10px; background:#10b981;" onclick="cmd('userban','${b.chat_id}','unban')"><i class="fa-solid fa-lock-open"></i> Mở Khóa</button>
+                    </div>`;
+                });
+                document.getElementById('a_banned_list').innerHTML = bh || '<p style="text-align:center;color:#64748b;padding:20px;">Không có user bị ban.</p>';
+                
+
+                if(d.d.ranks) {
+                    let opR = '<option value="">-- Các Rank Đang Có --</option>';
+                    let opU = '<option value="">-- Chọn Rank để set cho User --</option>';
+                    let opE = '<option value="Customer">Giá mặc định (Customer)</option>';
+                    d.d.ranks.forEach(r => { 
+                        if(r.rank_name !== 'Customer') {
+                            let ht = `<option value="${r.rank_name}">${r.rank_name}</option>`;
+                            opR += ht; opU += ht; opE += ht;
+                        }
+                    });
+                    if(document.getElementById('ar_sel')) document.getElementById('ar_sel').innerHTML = opR;
+                    if(document.getElementById('au_v_rank')) document.getElementById('au_v_rank').innerHTML = opU;
+                    if(document.getElementById('ep_r')) document.getElementById('ep_r').innerHTML = opE;
+                }
+
+                if(d.d.cats_ordered) {
+                    shopData.cats = d.d.cats_ordered;
+                    loadAdmCombo();
+                } else {
+                    loadAdmCombo();
+                }
+                
+                if(document.getElementById('adm_maintenance_on') && d.d.maintenance_on !== undefined) document.getElementById('adm_maintenance_on').value = d.d.maintenance_on;
+                if(document.getElementById('adm_maintenance_msg') && d.d.maintenance_msg !== undefined) document.getElementById('adm_maintenance_msg').value = d.d.maintenance_msg;
+
+                if(d.d.top_conf) {
+                    let tc = d.d.top_conf;
+                    if(document.getElementById('tc_en')) document.getElementById('tc_en').value = tc.enabled;
+                    if(document.getElementById('tc_ty')) document.getElementById('tc_ty').value = tc.type;
+                    let dtype = tc.discount_type || 'pct';
+                    if(document.getElementById('tc_dtype')) {
+                        document.getElementById('tc_dtype').value = dtype;
+                        toggleDiscountType();
+                    }
+                    let savedDays = tc.promo_days || [6, 7];
+                    document.querySelectorAll('.tc_day_chk').forEach(el => {
+                        el.checked = savedDays.includes(parseInt(el.value));
+                    });
+
+                    if (dtype === 'pct') {
+                        ['tc_1','tc_2','tc_3','tc_4','tc_5'].forEach((id, i) => {
+                            let el = document.getElementById(id); if(el) el.value = ['top1','top2','top3','top4','top5'].map(k => tc[k])[i] || 0;
+                        });
+                    } else {
+                        let elSp = document.getElementById('tc_sp_prod'); if(elSp) elSp.value = tc.special_prod || '';
+                        let elSpP = document.getElementById('tc_sp_price'); if(elSpP) elSpP.value = tc.special_price || '';
+                    }
+                }
+                if(document.getElementById('rf_p')) document.getElementById('rf_p').value = d.d.ref_pct;
+            }
+        });
+    }
+    
+    function listKeys() {
+        let code = document.getElementById('ak_m').value;
+        if (!code) return tg.showAlert("Vui lòng chọn Mã Gói ở ô Quản Lý Kho");
+        let listContainer = document.getElementById('al_ls');
+        listContainer.innerHTML = '<p style="text-align:center;color:#64748b;padding:20px;"><i class="fa-solid fa-circle-notch fa-spin" style="font-size:24px;"></i></p>';
+        r('adm_post', { cmd: 'listkeys', p1: code }).then(d => {
+            if (d.ok) {
+                let h = '';
+                d.data.forEach(k => {
+                    h += `<div style="display:flex;justify-content:space-between;background:rgba(255,255,255,0.03);padding:12px 15px;border-radius:12px;margin-bottom:10px;border:1px solid rgba(255,255,255,0.05);align-items:center;">
+                            <span style="font-family:monospace;font-size:13px;word-break:break-all;color:var(--pr);display:flex;align-items:center;gap:8px;"><i class="fa-solid fa-key" style="opacity:0.5;"></i> ${k.key_code}</span>
+                            <button class="btn-sm btn-red" style="border:none;margin-left:15px;box-shadow:none;cursor:pointer;padding:6px 10px;border-radius:8px;background:rgba(239,68,68,0.2);color:#ef4444;" onclick="delKeyId(${k.id})"></button>
+                          </div>`;
+                });
+                listContainer.innerHTML = h || '<p style="text-align:center;font-size:13px;color:#64748b;margin-top:15px;">Empty.</p>';
+            } else {
+                tg.showAlert(d.msg); listContainer.innerHTML = '';
+            }
+        }).catch(() => { tg.showAlert("Connection error!"); listContainer.innerHTML = ''; });
+    }
+    
+    function delKeyId(id) {
+        tg.showConfirm(t('confirm_delete_key'), o => {
+            if (o) r('adm_post', { cmd: 'delkey_id', p1: id }).then(d => { tg.showAlert(d.msg); if(d.ok) listKeys(); });
+        });
+    }
+    
+    function duyetDon(id) {
+        tg.showConfirm(t('confirm_approve'), o => {
+            if (o) r('adm_post', { cmd: 'duyet_nap', p1: id }).then(d => { tg.showAlert(d.msg); loadAd(); });
+        });
+    }
+    
+    function huyDon(id) {
+        tg.showConfirm(t('confirm_cancel'), o => {
+            if (o) r('adm_post', { cmd: 'huy_nap', p1: id }).then(d => { tg.showAlert(d.msg); loadAd(); });
+        });
+    }
+    
+    function cmd(c, v1, v2, v3, v4, v5, v6, v7, v8, v9, v10) {
+        let p = { cmd: c };
+        let gv = id => { 
+            if (id === 'add' || id === 'sub' || id === 'ban' || id === 'unban') return id;
+            let e = document.getElementById(id); return e ? e.value : ''; 
+        };
+        if (v1) p.p1 = gv(v1); if (v2) p.p2 = gv(v2); if (v3) p.p3 = gv(v3);
+        if (v4) p.p4 = gv(v4); if (v5) p.p5 = gv(v5); if (v6) p.p6 = gv(v6);
+        if (v7) p.p7 = gv(v7); if (v8) p.p8 = gv(v8); if (v9) p.p9 = gv(v9);
+        if (v10) p.p10 = gv(v10);
+        
+        let runReq = () => {
+            r('adm_post', p).then(d => {
+                tg.showAlert(d.msg);
+                if(d.ok) {
+                    loadAd();
+                    if (['upkey', 'delkey_id', 'delkeys'].includes(c)) {
+                        if (document.getElementById('ak_m').value) listKeys();
+                    }
+                }
+            });
+        };
+        
+        if (['delcat', 'delsp', 'delkeys', 'clearspam', 'del_rank'].includes(c)) {
+            tg.showConfirm(t('confirm_delete'), o => { if (o) runReq(); });
+        } else {
+            runReq();
+        }
+    }
+    
+	    setInterval(() => {
+	        r('ping').then(d => {
+	            if (d.ok) {
+	                if (lastBal !== -1 && d.bal > lastBal) {
+	                    let depTime = new Date().toLocaleString('vi-VN');
+	                    let depDetails = `
+	                        <div style="display:flex; justify-content:space-between; margin-bottom:8px;"><span>ID:</span><b style="color:#fff;">${user.id}</b></div>
+	                        <div style="display:flex; justify-content:space-between; margin-bottom:8px;"><span>Username:</span><b style="color:#38bdf8;">@${uname}</b></div>
+	                        <div style="display:flex; justify-content:space-between; margin-bottom:8px;"><span>Full name:</span><b style="color:#fff;">${fullname}</b></div>
+	                        <div style="display:flex; justify-content:space-between; margin-bottom:8px;"><span>Số tiền nạp:</span><b style="color:#10b981;">+${f(d.bal - lastBal)}đ</b></div>
+	                        <div style="display:flex; justify-content:space-between; margin-bottom:8px;"><span>Số dư hiện tại:</span><b style="color:#fff;">${f(d.bal)}đ</b></div>
+	                        <div style="display:flex; justify-content:space-between;"><span>Thời gian:</span><b style="color:#94a3b8; font-size:11px;">${depTime}</b></div>
+	                    `;
+	                    tg.showConfirm("<b>NẠP TIỀN THÀNH CÔNG!</b><br>Số dư của bạn đã được cập nhật.", () => {}, { 
+	                        title: 'Thành Công', 
+	                        okText: 'Đóng thông báo',
+	                        isNotice: true,
+	                        details: depDetails 
+	                    });
+	                }
+	                lastBal = d.bal;
+	                document.getElementById('h_b').innerText = f(d.bal) + 'đ';
+	                if (d.hist) renderProHist(d.hist);
+	                if (d.dep_hist) renderDepHist(d.dep_hist);
+	                if (d.g_buy || d.g_dep) renderGlobal(d.g_buy, d.g_dep);
+	                if (d.top_m) { lastTopM = d.top_m; lastTopW = d.top_w; lastTopAll = d.top_all; renderAllTops(); }
+	            }
+	        });
+	    }, 5000);
+
+	    ld();
+	</script>
+</body>
+</html>
