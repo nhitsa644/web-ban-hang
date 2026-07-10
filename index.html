@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="vi">
 <head>
@@ -5,7 +6,6 @@
     <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
     <title>Mini App</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         :root {
@@ -202,7 +202,7 @@
     </style>
 </head>
 <body>
-        <div id="loading_screen" style="position:fixed; top:0; left:0; width:100%; height:100%; background:linear-gradient(135deg,#0b0f19,#141722); z-index:9999; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:30px;">
+    <div id="loading_screen" style="position:fixed; top:0; left:0; width:100%; height:100%; background:linear-gradient(135deg,#0b0f19,#141722); z-index:9999; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:30px;">
         <div style="text-align:center;">
             <div style="width:70px; height:70px; border:4px solid rgba(99,102,241,0.2); border-top:4px solid #6366f1; border-radius:50%; animation:spin_load 1s linear infinite; margin:0 auto 25px;"></div>
             <p style="color:#cbd5e1; font-size:16px; margin:0; font-weight:700; letter-spacing:0.5px;">Đang tải ứng dụng...</p>
@@ -276,7 +276,7 @@
             </button>
         </div>
         <div class="hdr-right">
-            <b id="h_b">100000đ</b>
+            <b id="h_b">0đ</b>
             <span id="h_r">Customer</span>
         </div>
     </div>
@@ -1052,16 +1052,50 @@
     
     function f(n) { return Number(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, "."); }
     
-    const initData = tg.initData || '';
+    // ── HMAC + Nonce helper ──────────────────────────────────────────────────
+    // Nonce token được server cấp (HMAC-SHA256) và cache ở client
+    // Client KHÔNG tự tính — lấy từ response ping/init trường '_nt'
+    let _cachedNonce = '';
+
+    function setNonce(nt) { if (nt) _cachedNonce = nt; }
+    function getNonce() { return _cachedNonce; }
+
+    // ── Hàm request chính — tự động đính initData + nonce ───────────────────
+    // ── Hàm request chính — tự động đính initData + nonce ───────────────────
+    const _initDataRaw = tg_origin.initData || '';
+    const _writeActions = ['buy','dep','apply_giftcode','apply_voucher','adm_post','set_lang'];
 
     function r(a, b = {}) {
-        b.initData = initData;
+        b.uid = uid;
+        // LAYER 1: Gửi initData Telegram để server verify HMAC-SHA256
+        if (_initDataRaw) b.initData = _initDataRaw;
+        // LAYER 2: Gửi nonce token (do server cấp) cho write actions — chống replay
+        if (_writeActions.includes(a) && _cachedNonce) b._nonce = _cachedNonce;
         return fetch('?api=' + a, {
             method: 'POST',
             headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
             body: new URLSearchParams(b)
-        })
-        .then(x => x.json());
+        }).then(x => x.json()).then(d => {
+            // Cập nhật nonce mới từ mỗi response
+            if (d._nt) setNonce(d._nt);
+            // Tự động handle lỗi auth
+            if (!d.ok && d.code === 'HMAC_FAIL') {
+                tg.showAlert('Xác thực Telegram thất bại. Vui lòng đóng và mở lại App!');
+            }
+            if (!d.ok && d.code === 'NONCE_FAIL') {
+                // Nonce hết hạn — ping lại để lấy nonce mới rồi retry tự động
+                return fetch('?api=ping', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: new URLSearchParams({ uid, initData: _initDataRaw })
+                }).then(x => x.json()).then(p => {
+                    if (p._nt) { setNonce(p._nt); }
+                    d.msg = 'Phiên hết hạn, vui lòng thử lại!';
+                    return d;
+                });
+            }
+            return d;
+        });
     }
     
     function copyKey(el, txt) {
@@ -1178,6 +1212,7 @@
     
     function ping() {
         r('ping').then(d => {
+            if (d._nt) setNonce(d._nt); // Refresh nonce mỗi lần ping
             if (d.ok && document.getElementById('h_b')) {
                 if (lastBal !== -1 && d.bal > lastBal) {
                     if (document.getElementById('qr_mdl').style.display === 'flex') {
@@ -1407,7 +1442,7 @@
             let items = groups[game];
             let listKeys = '';
             items.forEach(k => {
-                let safeKey = k.key_code.replace(/'/g, "\'");
+                let safeKey = k.key_code.replace(/'/g, "\\'");
                 listKeys += `<div class="k-row">
                     <div style="flex:1;">
                         <div class="k-code">${k.key_code}</div>
@@ -1557,6 +1592,7 @@
     
     function ld() {
         r('init').then(d => {
+            if (d._nt) setNonce(d._nt); // Set nonce từ init response
             if (!d.ok) return tg.showAlert(d.msg);
             
             let serverLang = d.u.lang || 'vi';
@@ -1633,10 +1669,10 @@
         shopData.cats.forEach(c => {
             let cType = c.type !== undefined ? parseInt(c.type) : 0;
             if(cType !== isAcc) return;
-            let imgUrl = c.img ? c.img.replace(/'/g, "\'") : '';
-            let safeName = c.name ? c.name.replace(/'/g, "\'") : '';
-            let fileUrl = c.file ? c.file.replace(/'/g, "\'") : '';
-            let shareUrl = c.share ? c.share.replace(/'/g, "\'") : '';
+            let imgUrl = c.img ? c.img.replace(/'/g, "\\'") : '';
+            let safeName = c.name ? c.name.replace(/'/g, "\\'") : '';
+            let fileUrl = c.file ? c.file.replace(/'/g, "\\'") : '';
+            let shareUrl = c.share ? c.share.replace(/'/g, "\\'") : '';
             let imgRender = c.img ? `<img src="${c.img}" style="width:100%;height:100%;object-fit:cover;border-radius:12px;">` : `<i class="fa-solid fa-gamepad" style="font-size:20px;color:var(--pr);"></i>`;
             h += `<div class="bs-item" onclick="chooseCat('${c.code}', '${safeName}', '${imgUrl}', '${fileUrl}', '${shareUrl}')">
                     <div style="width:45px;height:45px;background:rgba(255,255,255,0.05);border-radius:14px;display:flex;align-items:center;justify-content:center;border:1px solid rgba(255,255,255,0.05);">${imgRender}</div>
@@ -1673,7 +1709,7 @@
         let ph = '';
         pkgs.forEach(p => {
             let stockColor = p.stock > 0 ? '#10b981' : '#ef4444';
-            let safeName = p.name ? p.name.replace(/'/g, "\'") : '';
+            let safeName = p.name ? p.name.replace(/'/g, "\\'") : '';
             let priceDisp = '';
             let isSpecial = isPromoToday && myTopInfo.prod && myTopInfo.prod == p.code && myTopInfo.prod_price !== null;
             if (isSpecial) {
@@ -2039,36 +2075,7 @@
         }
     }
     
-	    setInterval(() => {
-	        r('ping').then(d => {
-	            if (d.ok) {
-	                if (lastBal !== -1 && d.bal > lastBal) {
-	                    let depTime = new Date().toLocaleString('vi-VN');
-	                    let depDetails = `
-	                        <div style="display:flex; justify-content:space-between; margin-bottom:8px;"><span>ID:</span><b style="color:#fff;">${user.id}</b></div>
-	                        <div style="display:flex; justify-content:space-between; margin-bottom:8px;"><span>Username:</span><b style="color:#38bdf8;">@${uname}</b></div>
-	                        <div style="display:flex; justify-content:space-between; margin-bottom:8px;"><span>Full name:</span><b style="color:#fff;">${fullname}</b></div>
-	                        <div style="display:flex; justify-content:space-between; margin-bottom:8px;"><span>Số tiền nạp:</span><b style="color:#10b981;">+${f(d.bal - lastBal)}đ</b></div>
-	                        <div style="display:flex; justify-content:space-between; margin-bottom:8px;"><span>Số dư hiện tại:</span><b style="color:#fff;">${f(d.bal)}đ</b></div>
-	                        <div style="display:flex; justify-content:space-between;"><span>Thời gian:</span><b style="color:#94a3b8; font-size:11px;">${depTime}</b></div>
-	                    `;
-	                    tg.showConfirm("<b>NẠP TIỀN THÀNH CÔNG!</b><br>Số dư của bạn đã được cập nhật.", () => {}, { 
-	                        title: 'Thành Công', 
-	                        okText: 'Đóng thông báo',
-	                        isNotice: true,
-	                        details: depDetails 
-	                    });
-	                }
-	                lastBal = d.bal;
-	                document.getElementById('h_b').innerText = f(d.bal) + 'đ';
-	                if (d.hist) renderProHist(d.hist);
-	                if (d.dep_hist) renderDepHist(d.dep_hist);
-	                if (d.g_buy || d.g_dep) renderGlobal(d.g_buy, d.g_dep);
-	                if (d.top_m) { lastTopM = d.top_m; lastTopW = d.top_w; lastTopAll = d.top_all; renderAllTops(); }
-	            }
-	        });
-	    }, 5000);
-
+	
 	    ld();
 	</script>
 </body>
